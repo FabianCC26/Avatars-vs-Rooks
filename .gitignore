@@ -207,6 +207,8 @@ marimo/_lsp/
 __marimo__/
 
 
-
-# Credenciales de la base de datos
+# Ignorar credenciales Firebase
 DBconfig/*.json
+DBconfig/*.pem
+DBconfig/__pycache__/
+
