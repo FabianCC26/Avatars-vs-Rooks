@@ -75,7 +75,7 @@ def registrar_usuario(data: dict) -> tuple[bool, str]:
             "role": data["role"],
             "username": username,
             "email": email,
-            "password": data["password"],  # En el futuro cifrar 
+            "password": data["password"],  # En el futuro crear un metodo de cifrado 
         }
 
         # Agregar campos de admin si aplica

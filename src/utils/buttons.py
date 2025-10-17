@@ -1,3 +1,6 @@
+
+#Constructor de botones
+
 import pygame
 
 class Button:
