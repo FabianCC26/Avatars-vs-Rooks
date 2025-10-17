@@ -17,6 +17,7 @@ COLOR_PRIMARY = (15, 158, 213)
 COLOR_SECONDARY = (131, 202, 235)
 COLOR_TEXT = (33, 33, 33)
 
+
 # FPS (frames por segundo) para pygame
 FPS = 60
 
@@ -35,3 +36,4 @@ FIREBASE_CONFIG_PATH = "DBconfig/avatar-vs-rooks-firebase-adminsdk-fbsvc-20a1834
 
 # MODO DESARROLLO
 DEBUG_MODE = True
+
