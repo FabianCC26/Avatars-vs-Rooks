@@ -4,13 +4,7 @@ from DBconfig.firebase_config import *
 import requests
 
 
-# Tu API Key de Firebase
-API_KEY = "AIzaSyB0vNKFTx8_3PYNU0VAb7CXCvhMlfN6PYg"  
-
-# ===========================
-# Función de login por username
-# ===========================
-def login_por_username(username, password):
+def login_por_username(username, password):     # Función de login por username
     """
     Valida un usuario en Firestore por username y contraseña usando Firebase Auth REST API
     """

@@ -9,8 +9,8 @@ def probar_login():
     resultado = login_por_username(username, password)
 
     if resultado:
-        print(f"\n👤 Bienvenido {resultado.get('nombre', 'Usuario')}")
-        print(f"🔹 Rol: {resultado.get('rol', 'Sin rol asignado')}")
+        print(f"\n👤 Bienvenido {resultado.get('name', 'Usuario')}")
+        print(f"🔹 Rol: {resultado.get('role', 'Sin rol asignado')}")
     else:
         print("\n❌ Error en autenticación.")
 
