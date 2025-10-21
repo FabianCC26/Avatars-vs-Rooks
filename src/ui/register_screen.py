@@ -19,7 +19,7 @@ class RegisterScreen:
         self.message = ""          # Mensaje de éxito o error
         self.message_color = (255, 0, 0)
 
-        # 🔹 Menú desplegable de rol (ubicado al inicio del formulario)
+        # Menú desplegable de rol (ubicado al inicio del formulario)
         self.dropdown = Dropdown(
             x=440, y=130, width=400, height=40,
             font=self.font,

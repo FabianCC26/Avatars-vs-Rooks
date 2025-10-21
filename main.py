@@ -6,7 +6,7 @@ Punto de entrada principal del juego.
 
 import pygame
 from src.config import settings
-from src.ui.main_window import main_window
+#from src.ui.main_window import MainWindow
 
 def main():
     """Función principal del juego."""
