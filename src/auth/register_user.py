@@ -1,5 +1,8 @@
 import re
-from DBconfig.firebase_config import db
+import hashlib
+import requests
+from DBconfig.firebase_config import db, API_KEY
+
 
 
 # VALIDACIÓN DE DATOS DE USUARIO
@@ -39,14 +42,42 @@ def validar_datos_usuario(data: dict) -> tuple[bool, str]:
 
 
 
+# MÉTODOS AUXILIARES
+
+
+def hash_password(password: str) -> str:
+    """
+    Cifra la contraseña con SHA-256 antes de guardarla.
+    Esto evita almacenar texto plano en Firestore.
+    """
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+
+def registrar_en_firebase_auth(email: str, password: str) -> tuple[bool, str | None]:
+    """
+    Crea un nuevo usuario en Firebase Authentication mediante la REST API.
+    Devuelve (True, uid) si el registro fue exitoso.
+    """
+    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={API_KEY}"
+    payload = {"email": email, "password": password, "returnSecureToken": True}
+
+    response = requests.post(url, json=payload)
+
+    if response.status_code == 200:
+        data = response.json()
+        return True, data.get("localId")  # UID del usuario en Auth
+    else:
+        return False, f"Error de Firebase Auth: {response.json()}"
+
+
+
 # REGISTRO DE USUARIO EN FIREBASE
 
 
 def registrar_usuario(data: dict) -> tuple[bool, str]:
     """
-    Registra un nuevo usuario en la colección 'users' de Firestore.
+    Registra un nuevo usuario en la colección 'users' de Firestore y en Firebase Authentication.
     Usa el 'username' como ID del documento para evitar duplicados.
-
     """
 
     # Validar datos antes de registrar
@@ -55,8 +86,9 @@ def registrar_usuario(data: dict) -> tuple[bool, str]:
         return False, msg
 
     try:
-        username = data["username"].strip().lower()  # normalizamos el username
+        username = data["username"].strip().lower()
         email = data["email"].strip().lower()
+        password = data["password"]
 
         user_ref = db.collection("users").document(username)
         existing_doc = user_ref.get()
@@ -70,12 +102,23 @@ def registrar_usuario(data: dict) -> tuple[bool, str]:
         if existing_email:
             return False, f"El correo '{email}' ya está registrado."
 
+        # 1️⃣ Registrar el usuario en Firebase Authentication
+        auth_success, auth_result = registrar_en_firebase_auth(email, password)
+        if not auth_success:
+            return False, f"No se pudo registrar en Firebase Auth: {auth_result}"
+
+        uid = auth_result
+
+        # 2️⃣ Cifrar la contraseña antes de guardar en Firestore
+        hashed_password = hash_password(password)
+
         # Crear estructura estandarizada de usuario
         user_data = {
             "role": data["role"],
             "username": username,
             "email": email,
-            "password": data["password"],  # En el futuro crear un metodo de cifrado 
+            "password": hashed_password,  # Contraseña cifrada
+            "uid": uid
         }
 
         # Agregar campos de admin si aplica
