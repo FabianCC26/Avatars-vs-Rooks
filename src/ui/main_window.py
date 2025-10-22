@@ -9,7 +9,7 @@ from src.config.settings import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI
 
 class MainWindow:
 
-    def __init__(self):
+    def __init__(self, role, user, photo):
 
         pygame.init()
         self.screen = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
@@ -94,6 +94,27 @@ class MainWindow:
             fill=self.tinted, 
             text_color=self.button_text_color,
         )
+
+        
+        self.user_info_canva = Button(
+            pos=(470, 100), size=(500, 90), 
+            text=(str(user) + "   -   " + str(role)),
+            hover_color=self.button_light_bg,
+            bg_color=self.button_light_bg, 
+            text_color=self.button_text_color, 
+            font= self.font
+        )
+
+        self.user_photo_canva = ButtonWithImage(
+            image_path=photo,
+            pos=(170, 100), 
+            size=(90, 90), 
+            text="", 
+            hover_color=self.button_light_hoover,
+            fill=self.tinted, 
+            text_color=self.button_text_color,
+        )
+        
 
 
         #Configuration menu:
@@ -203,8 +224,8 @@ class MainWindow:
         )
 
         self.pause_song_button = Button(
-            pos=(550, 500),
-            size=(120, 80), 
+            pos=(640, 500),
+            size=(300, 80), 
             text="Pause", 
             hover_color=self.button_light_hoover,
             bg_color=self.button_light_bg, 
@@ -272,6 +293,9 @@ class MainWindow:
         self.resume_song_button.bg_color = self.button_dark_bg
         self.resume_song_button.hover_color = self.button_dark_hoover
 
+        self.user_info_canva.bg_color = self.button_dark_bg
+        self.user_info_canva.hover_color = self.button_dark_bg
+
         self.main_menu_draw()
 
 
@@ -307,6 +331,9 @@ class MainWindow:
 
         self.resume_song_button.bg_color = self.button_light_bg
         self.resume_song_button.hover_color = self.button_light_hoover
+
+        self.user_info_canva.bg_color = self.button_light_bg
+        self.user_info_canva.hover_color = self.button_light_bg
 
         self.main_menu_draw()
 
@@ -348,13 +375,15 @@ class MainWindow:
             self.music_input_box.draw(self.screen)
 
             self.pause_song_button.draw(self.screen)
-            self.resume_song_button.draw(self.screen)
+            #self.resume_song_button.draw(self.screen)
 
         else:
+            self.user_info_canva.draw(self.screen)
             self.play_button.draw(self.screen)
             self.user_ranking_button.draw(self.screen)
             self.global_ranking_button.draw(self.screen)
             self.configuration_button.draw(self.screen)
+            self.user_photo_canva.draw(self.screen)
 
         pygame.display.flip()
 
