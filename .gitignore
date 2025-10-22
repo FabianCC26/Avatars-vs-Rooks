@@ -212,3 +212,4 @@ DBconfig/*.json
 DBconfig/*.pem
 DBconfig/__pycache__/
 
+src/config/.env

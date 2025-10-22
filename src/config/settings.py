@@ -3,6 +3,15 @@
 Configuración inicial del proyecto.
 
 """
+import os
+from dotenv import load_dotenv
+
+# Carga el archivo .env desde la misma carpeta
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
+
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+REDIRECT_URI = os.getenv("REDIRECT_URI")
 
 # Dimensiones de la ventana principal (en píxeles)
 WINDOW_WIDTH = 1280
