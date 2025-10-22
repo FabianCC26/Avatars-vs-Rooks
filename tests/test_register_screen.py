@@ -31,17 +31,17 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
 
-            # If "Registrarse" button is clicked, open RegisterScreen
+            # abrir la pantalla de registro si se hace click en el boton de registarse
             if register_button.event_mouse(event):
                 register_screen = RegisterScreen(screen)
                 result = register_screen.run()
                 if result == "QUIT":
                     running = False
 
-        # Draw main button
+        # dibujar el boton
         register_button.draw(screen)
 
-        # Draw title
+        # dibujar el titulo
         title = font.render("Pantalla de prueba principal", True, settings.COLOR_TEXT)
         screen.blit(title, (settings.WINDOW_WIDTH // 2 - 220, 200))
 
