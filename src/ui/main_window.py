@@ -2,7 +2,10 @@ import os
 import pygame
 from src.config import settings
 from src.utils.buttons import Button
+from src.utils.input_box import InputBox
+from src.utils.spotify_api_configuration import MusicAPI
 from src.utils.buttons_with_images import ButtonWithImage
+from src.config.settings import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI
 
 class MainWindow:
 
@@ -95,7 +98,7 @@ class MainWindow:
 
         #Configuration menu:
         self.light_theme_button = Button(
-            pos=(640, 80), size=(300, 80), 
+            pos=(430, 95), size=(300, 80), 
             text="Light Theme",
             hover_color=self.button_light_hoover,
             bg_color=self.button_light_bg, 
@@ -105,7 +108,7 @@ class MainWindow:
 
 
         self.dark_theme_button = Button(
-            pos=(640, 180), size=(300, 80), 
+            pos=(780, 95), size=(300, 80), 
             text="Dark Theme",
             hover_color=self.button_light_hoover,
             bg_color=self.button_light_bg, 
@@ -126,7 +129,7 @@ class MainWindow:
 
         #Color: (206, 14, 14)
         self.tint1 = Button(
-            pos=(530, 300), size=(80, 80), 
+            pos=(330, 230), size=(80, 80), 
             text="",
             hover_color=(206, 14, 14),
             bg_color=(206, 14, 14), 
@@ -136,7 +139,7 @@ class MainWindow:
 
         #Color: 50, 63, 180
         self.tint2 = Button(
-            pos=(640, 300), size=(80, 80), 
+            pos=(430, 230), size=(80, 80), 
             text="",
             hover_color=(50,53,180),
             bg_color=(50,53,180), 
@@ -146,7 +149,7 @@ class MainWindow:
 
         #Color: 36, 174, 58
         self.tint3 = Button(
-            pos=(750, 300), size=(80, 80), 
+            pos=(540, 230), size=(80, 80), 
             text="",
             hover_color=(36, 174, 58),
             bg_color=(36, 174, 58), 
@@ -156,7 +159,7 @@ class MainWindow:
 
         #Color: 138, 50, 180
         self.tint4 = Button(
-            pos=(530, 400), size=(80, 80), 
+            pos=(673, 230), size=(80, 80), 
             text="",
             hover_color=(138, 50, 180),
             bg_color=(138, 50, 180), 
@@ -166,7 +169,7 @@ class MainWindow:
 
         #Color: 235, 96, 6
         self.tint5 = Button(
-            pos=(640, 400), size=(80, 80), 
+            pos=(773, 230), size=(80, 80), 
             text="",
             hover_color=(235, 96, 6),
             bg_color=(235, 96, 6), 
@@ -176,13 +179,65 @@ class MainWindow:
 
         #Color: 0,0,0
         self.tint6 = Button(
-            pos=(750, 400), size=(80, 80), 
+            pos=(873, 230), size=(80, 80), 
             text="",
             hover_color=(0,0,0),
             bg_color=(0,0,0), 
             text_color=self.button_text_color, 
             font= self.font
         )
+
+
+        #InputBox para canción:
+
+        self.music_input_box = InputBox(490, 300, 300, 40, self.font, placeholder="Song name")
+
+        self.search_song_button = Button(
+            pos=(640, 390),
+            size=(300, 80), 
+            text="Search", 
+            hover_color=self.button_light_hoover,
+            bg_color=self.button_light_bg, 
+            text_color=self.button_text_color,
+            font=self.font
+        )
+
+        self.pause_song_button = Button(
+            pos=(550, 500),
+            size=(120, 80), 
+            text="Pause", 
+            hover_color=self.button_light_hoover,
+            bg_color=self.button_light_bg, 
+            text_color=self.button_text_color,
+            font=self.font
+        )
+
+        self.resume_song_button = Button(
+            pos=(730, 500),
+            size=(120, 80), 
+            text="Resume", 
+            hover_color=self.button_light_hoover,
+            bg_color=self.button_light_bg, 
+            text_color=self.button_text_color,
+            font=self.font
+        )
+
+
+        self. api = MusicAPI(
+            client_id =CLIENT_ID,
+            client_secret = CLIENT_SECRET,
+            redirect_uri= REDIRECT_URI
+        )
+
+
+    def put_music_api(self, song):
+        self.api.play_song(song)
+
+    def pause_music_api(self):
+        self.api.pause()
+    
+    def resume_mucis_api(self):
+        self.api.resume()
 
     def turn_dark(self):
 
@@ -207,6 +262,15 @@ class MainWindow:
 
         self.back_to_main_button.bg_color = self.button_dark_bg
         self.back_to_main_button.hover_color = self.button_dark_hoover 
+
+        self.search_song_button.bg_color = self.button_dark_bg
+        self.search_song_button.hover_color = self.button_dark_hoover
+
+        self.pause_song_button.bg_color = self.button_dark_bg
+        self.pause_song_button.hover_color = self.button_dark_hoover
+
+        self.resume_song_button.bg_color = self.button_dark_bg
+        self.resume_song_button.hover_color = self.button_dark_hoover
 
         self.main_menu_draw()
 
@@ -235,6 +299,15 @@ class MainWindow:
         self.back_to_main_button.bg_color = self.button_light_bg
         self.back_to_main_button.hover_color = self.button_light_hoover 
 
+        self.search_song_button.bg_color = self.button_light_bg
+        self.search_song_button.hover_color = self.button_light_hoover
+
+        self.pause_song_button.bg_color = self.button_light_bg
+        self.pause_song_button.hover_color = self.button_light_hoover
+
+        self.resume_song_button.bg_color = self.button_light_bg
+        self.resume_song_button.hover_color = self.button_light_hoover
+
         self.main_menu_draw()
 
 
@@ -247,14 +320,12 @@ class MainWindow:
         self.light_theme_button.text_color = color
         self.dark_theme_button.text_color = color
         self.back_to_main_button.text_color = color
+        self.search_song_button.text_color = color
+        self.pause_song_button.text_color = color
+        self.resume_song_button.text_color = color
 
         self.main_menu_draw()
     
-
-    def configuration_draw(self):
-         self.actual_menu_layout = "Configuration"
-         self.main_menu_draw()
-
 
     def main_menu_draw(self):
 
@@ -273,6 +344,12 @@ class MainWindow:
             self.tint5.draw(self.screen)
             self.tint6.draw(self.screen)
 
+            self.search_song_button.draw(self.screen)
+            self.music_input_box.draw(self.screen)
+
+            self.pause_song_button.draw(self.screen)
+            self.resume_song_button.draw(self.screen)
+
         else:
             self.play_button.draw(self.screen)
             self.user_ranking_button.draw(self.screen)
@@ -290,7 +367,7 @@ class MainWindow:
 
             if self.actual_menu_layout == "Main menu":
                 if self.configuration_button.event_mouse(event):
-                    self.configuration_draw()
+                    self.actual_menu_layout = "Configuration"
 
                 if self.play_button.event_mouse(event):
                     pass
@@ -301,6 +378,19 @@ class MainWindow:
                     pass
 
             elif self.actual_menu_layout == "Configuration":
+
+                if self.music_input_box.handle_event(event):
+                    print(self.music_input_box.get_text())
+                
+                if self.search_song_button.event_mouse(event):
+                    self.put_music_api(self.music_input_box.get_text())
+                
+                if self.pause_song_button.event_mouse(event):
+                    self.pause_music_api()
+                
+                if self.resume_song_button.event_mouse(event):
+                    self.resume_mucis_api()
+
                 if self.dark_theme_button.event_mouse(event):
                     self.turn_dark()
 
@@ -327,6 +417,7 @@ class MainWindow:
                 
                 if self.tint6.event_mouse(event):
                     self.tint((0,0,0))
+                
 
     def run(self):
 
