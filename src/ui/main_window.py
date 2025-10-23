@@ -11,7 +11,8 @@ class MainWindow:
 
     def __init__(self, role, user, photo):
 
-        pygame.init()
+        # NO llamar a pygame.init() aquí — se inicializa en main.py
+        # Creamos la superficie usando la misma resolución que la app
         self.screen = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
         self.running = True
         pygame.display.set_caption("Main Window")
@@ -450,7 +451,7 @@ class MainWindow:
 
     def run(self):
 
-        """Bucle principal de la pantalla de registro."""
+        """Bucle principal de la pantalla principal."""
         clock = pygame.time.Clock()
         while self.running:
             action = self.handle_events()
@@ -460,4 +461,6 @@ class MainWindow:
             self.main_menu_draw()
             clock.tick(settings.FPS)
 
-        pygame.quit()
+        # NO llamar a pygame.quit() aquí — que puede cerrar toda la app
+        return None
+

@@ -102,14 +102,14 @@ def registrar_usuario(data: dict) -> tuple[bool, str]:
         if existing_email:
             return False, f"El correo '{email}' ya está registrado."
 
-        # 1️⃣ Registrar el usuario en Firebase Authentication
+        # Registrar el usuario en Firebase Authentication
         auth_success, auth_result = registrar_en_firebase_auth(email, password)
         if not auth_success:
             return False, f"No se pudo registrar en Firebase Auth: {auth_result}"
 
         uid = auth_result
 
-        # 2️⃣ Cifrar la contraseña antes de guardar en Firestore
+        # Cifrar la contraseña antes de guardar en Firestore
         hashed_password = hash_password(password)
 
         # Crear estructura estandarizada de usuario

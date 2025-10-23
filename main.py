@@ -1,34 +1,36 @@
-"""
-
-Punto de entrada principal del juego.
-
-"""
-
 import pygame
 from src.config import settings
-#from src.ui.main_window import MainWindow
+from src.ui.login_screen import LoginScreen
+from src.ui.register_screen import RegisterScreen
 
 def main():
-    """Función principal del juego."""
+    """Punto de entrada principal del juego."""
     pygame.init()
-    
-    # Configuración de ventana
     screen = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
     pygame.display.set_caption(settings.WINDOW_TITLE)
-    
-    # Control de FPS
-    clock = pygame.time.Clock()
-    
+
     running = True
+    current_screen = "LOGIN"
+
     while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+        if current_screen == "LOGIN":
+            login_screen = LoginScreen(screen)
+            action = login_screen.run()
+
+            if action == "REGISTER":
+                current_screen = "REGISTER"
+            elif action == "QUIT":
                 running = False
 
-        screen.fill(settings.COLOR_BACKGROUND)
-        pygame.display.flip()
-        clock.tick(settings.FPS)
-    
+        elif current_screen == "REGISTER":
+            register_screen = RegisterScreen(screen)
+            action = register_screen.run()
+
+            if action == "BACK":
+                current_screen = "LOGIN"
+            elif action == "QUIT":
+                running = False
+
     pygame.quit()
 
 if __name__ == "__main__":

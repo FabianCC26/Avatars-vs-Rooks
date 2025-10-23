@@ -213,3 +213,5 @@ DBconfig/*.pem
 DBconfig/__pycache__/
 
 src/config/.env
+
+.cache-spotify
