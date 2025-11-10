@@ -12,8 +12,9 @@ from src.auth.password_recovery import enviar_password_recovery
 class LoginScreen:
     def __init__(self, screen):
         self.screen = screen
-        self.font = pygame.font.SysFont("arial", 28)
-        self.small_font = pygame.font.SysFont("arial", 22)
+        self.font = pygame.font.SysFont(settings.FONT_FAMILY, settings.FONT_TITLE_SIZE)
+        self.small_font = pygame.font.SysFont(settings.FONT_FAMILY, settings.FONT_DEFAULT_SIZE)
+        self.xsmall_font = pygame.font.SysFont(settings.FONT_FAMILY, settings.FONT_SMALL_SIZE)
         self.running = True
         self.message = ""
         self.message_color = (255, 0, 0)
@@ -25,7 +26,13 @@ class LoginScreen:
         # Botones principales
         self.login_button = Button(pos=(640, 420), size=(200, 60), text="Login", bg_color=settings.COLOR_PRIMARY)
         self.register_button = Button(pos=(640, 530), size=(200, 50), text="Register", bg_color=(150, 150, 150))
-        self.forgot_button = Button(pos=(640, 600), size=(200, 40), text="Forgot Password?", bg_color=(180, 180, 180))
+        self.forgot_button = Button(
+            pos=(640, 600),
+            size=(200, 40),
+            text="Forgot Password?",
+            bg_color=(180, 180, 180),
+            font=self.xsmall_font  # Fuente más pequeña definida en settings
+        )
         self.quit_button = Button(pos=(100, 50), size=(150, 40), text="Quit", bg_color=(180, 180, 180))
 
     def handle_events(self):
@@ -132,13 +139,13 @@ class LoginScreen:
         self.forgot_button.draw(self.screen)
         self.quit_button.draw(self.screen)
 
-        # Texto “Don't have an account?” (solo visible en login)
+        # Texto informativo
         info_text = "Don't have an account?"
         info_surface = self.small_font.render(info_text, True, (0, 0, 0))
         info_rect = info_surface.get_rect(center=(settings.WINDOW_WIDTH // 2, 480))
         self.screen.blit(info_surface, info_rect)
 
-        # Mensaje
+        # Mensaje de estado
         if self.message:
             msg_surface = self.font.render(self.message, True, self.message_color)
             msg_rect = msg_surface.get_rect(center=(settings.WINDOW_WIDTH // 2, 690))

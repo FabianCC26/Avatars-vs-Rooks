@@ -1,7 +1,5 @@
 """
-
 Configuración inicial del proyecto.
-
 """
 import os
 from dotenv import load_dotenv
@@ -29,7 +27,7 @@ COLOR_TEXT = (33, 33, 33)
 # FPS (frames por segundo) para pygame
 FPS = 60
 
-#  RUTAS DE ARCHIVOS
+# RUTAS DE ARCHIVOS
 
 # Carpeta de recursos (imágenes, sonidos, etc.)
 ASSETS_PATH = "assets/"
@@ -44,3 +42,8 @@ FIREBASE_CONFIG_PATH = "DBconfig/avatar-vs-rooks-firebase-adminsdk-fbsvc-20a1834
 # MODO DESARROLLO
 DEBUG_MODE = True
 
+# FUENTES Y TAMAÑOS DE TEXTO
+FONT_FAMILY = "arial"
+FONT_TITLE_SIZE = 28
+FONT_DEFAULT_SIZE = 22
+FONT_SMALL_SIZE = 18
