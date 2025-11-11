@@ -6,6 +6,8 @@ from src.utils.input_box import InputBox
 from src.utils.spotify_api_configuration import MusicAPI
 from src.utils.buttons_with_images import ButtonWithImage
 from src.config.settings import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI
+from src.ui.info_window import InfoWindow
+
 
 class MainWindow:
 
@@ -23,7 +25,6 @@ class MainWindow:
 
         self.actual_menu_layout = "Main menu"
 
-
         #Backgrounds:
         dark_bg_path = os.path.join("src", "assets", "images", "dark_bg.png")
         self.dark_bg = pygame.image.load(dark_bg_path).convert()
@@ -35,12 +36,10 @@ class MainWindow:
 
         self.actual_bg = self.light_bg
 
-
         #Fuentes:
         font_path = os.path.join("src", "assets", "fonts", "Minecraftia-Regular.ttf")
         font_size = 25
         self.font = pygame.font.Font(font_path, font_size)
-
 
         #Buttons Configuration:
         self.button_light_bg = (217,217,217)
@@ -53,7 +52,6 @@ class MainWindow:
         self.image_dark_path= os.path.join("src", "assets", "images", "config_dark.PNG")
 
         self.config_button_actual_image = self.image_light_path
-
 
         #Main Menu Buttons:
         
@@ -96,6 +94,16 @@ class MainWindow:
             text_color=self.button_text_color,
         )
 
+        # Boton de para acceder a la pestaña de informacion
+        self.info_button = Button(
+            pos=(250, 550),
+            size=(150, 60),
+            text="INFO",
+            hover_color=self.button_light_hoover,
+            bg_color=self.button_light_bg,
+            text_color=self.button_text_color,
+            font=self.font
+        )
         
         self.user_info_canva = Button(
             pos=(470, 100), size=(500, 90), 
@@ -116,8 +124,6 @@ class MainWindow:
             text_color=self.button_text_color,
         )
         
-
-
         #Configuration menu:
         self.light_theme_button = Button(
             pos=(430, 95), size=(300, 80), 
@@ -127,7 +133,6 @@ class MainWindow:
             text_color=self.button_text_color, 
             font= self.font
         )
-
 
         self.dark_theme_button = Button(
             pos=(780, 95), size=(300, 80), 
@@ -209,7 +214,6 @@ class MainWindow:
             font= self.font
         )
 
-
         #InputBox para canción:
 
         self.music_input_box = InputBox(490, 300, 300, 40, self.font, placeholder="Song name")
@@ -243,7 +247,6 @@ class MainWindow:
             text_color=self.button_text_color,
             font=self.font
         )
-
 
         self. api = MusicAPI(
             client_id =CLIENT_ID,
@@ -297,6 +300,10 @@ class MainWindow:
         self.user_info_canva.bg_color = self.button_dark_bg
         self.user_info_canva.hover_color = self.button_dark_bg
 
+        # Configuracion del el botón de info
+        self.info_button.bg_color = self.button_dark_bg
+        self.info_button.hover_color = self.button_dark_hoover
+
         self.main_menu_draw()
 
 
@@ -336,8 +343,11 @@ class MainWindow:
         self.user_info_canva.bg_color = self.button_light_bg
         self.user_info_canva.hover_color = self.button_light_bg
 
-        self.main_menu_draw()
+        # CAMBIO: botón info tema claro
+        self.info_button.bg_color = self.button_light_bg
+        self.info_button.hover_color = self.button_light_hoover
 
+        self.main_menu_draw()
 
     def tint(self, color):
 
@@ -352,13 +362,14 @@ class MainWindow:
         self.pause_song_button.text_color = color
         self.resume_song_button.text_color = color
 
+        # Tintar boton info
+        self.info_button.text_color = color
+
         self.main_menu_draw()
     
-
     def main_menu_draw(self):
 
         self.screen.blit(self.actual_bg, (0, 0))      
-        #self.screen.fill((200, 200, 200))
 
         if (self.actual_menu_layout == "Configuration"):
             self.light_theme_button.draw(self.screen)
@@ -384,10 +395,10 @@ class MainWindow:
             self.user_ranking_button.draw(self.screen)
             self.global_ranking_button.draw(self.screen)
             self.configuration_button.draw(self.screen)
+            self.info_button.draw(self.screen)   # CAMBIO: mostramos el botón info
             self.user_photo_canva.draw(self.screen)
 
         pygame.display.flip()
-
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -398,6 +409,24 @@ class MainWindow:
             if self.actual_menu_layout == "Main menu":
                 if self.configuration_button.event_mouse(event):
                     self.actual_menu_layout = "Configuration"
+
+                # Abrir pestaña de informacion
+                if self.info_button.event_mouse(event):
+                    from src.ui.info_window import InfoWindow
+                    # armar los colores según el tema actual
+                    theme_colors = {
+                        "bg": self.button_light_bg if self.actual_bg == self.light_bg else self.button_dark_bg,
+                        "hover": self.button_light_hoover if self.actual_bg == self.light_bg else self.button_dark_hoover,
+                        "text": self.tinted
+                    }
+                    info_window = InfoWindow(self.screen, self.actual_bg, self.font)
+                    info_action = info_window.run()
+                    # cuando se vuelve de info, volver a dibujar el main_window
+                    self.main_menu_draw()
+                    # si en  info le dieron QUIT, sale del todo
+                    if info_action == "QUIT":
+                        self.running = False
+                        return "QUIT"
 
                 if self.play_button.event_mouse(event):
                     pass
@@ -448,7 +477,6 @@ class MainWindow:
                 if self.tint6.event_mouse(event):
                     self.tint((0,0,0))
                 
-
     def run(self):
 
         """Bucle principal de la pantalla principal."""
