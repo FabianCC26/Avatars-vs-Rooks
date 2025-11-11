@@ -7,6 +7,7 @@ import secrets
 from datetime import datetime, timezone
 from DBconfig.firebase_config import db
 from src.utils.email_service import send_email  # Se asume que existe una función send_email(to, subject, body)
+from google.cloud.firestore_v1 import DELETE_FIELD
 
 
 def _admin_email_list() -> list[str]:
@@ -51,12 +52,12 @@ def create_admin_approval_request(target_username: str, target_email: str, targe
         return  # No hay admins para aprobar; quedará pendiente hasta que exista alguno
 
     subject = "Avatars vs Rooks: nueva solicitud de administrador"
-    # El enlace es informativo; se puede usar el token dentro del panel admin del juego
+    country_name = nationality.get("name") if isinstance(nationality, dict) else str(nationality)
     body = (
         f"Se solicitó acceso de administrador.\n\n"
         f"Usuario: {target_username}\n"
         f"Nombre: {target_display}\n"
-        f"Nacionalidad: {nationality}\n"
+        f"Nacionalidad: {country_name}\n"
         f"Correo: {target_email}\n\n"
         f"Token de aprobación: {token}\n"
         f"Instrucciones: Ingrese al panel de administradores del juego y apruebe esta solicitud usando el token.\n"
@@ -73,7 +74,6 @@ def approve_admin_by_token(token: str, approver_username: str) -> tuple[bool, st
     Aprueba una solicitud por token. Debe llamarse desde un flujo donde 'approver_username'
     es un administrador aprobado. Devuelve (ok, mensaje).
     """
-    # Verifica que quien aprueba sea admin aprobado
     approver_doc = db.collection("users").document(approver_username.lower()).get()
     if not approver_doc.exists:
         return False, "Aprobador no existe."
@@ -95,12 +95,13 @@ def approve_admin_by_token(token: str, approver_username: str) -> tuple[bool, st
     if not user_doc.exists:
         return False, "Usuario objetivo no existe."
 
-    # Aprobar: marcar usuario como admin aprobado
+    # Aprobar: marcar usuario como admin aprobado y eliminar el campo 'pending_admin_since'
     user_ref.update({
         "role": "admin",
         "approved": True,
         "approved_by": approver_username,
-        "approved_at": datetime.now(timezone.utc).isoformat()
+        "approved_at": datetime.now(timezone.utc).isoformat(),
+        "pending_admin_since": DELETE_FIELD
     })
 
     # Marcar solicitud como aprobada
@@ -110,7 +111,7 @@ def approve_admin_by_token(token: str, approver_username: str) -> tuple[bool, st
         "approved_at": datetime.now(timezone.utc).isoformat()
     })
 
-    # Aviso (opcional): notificar al usuario objetivo por correo
+    # Avisar al usuario objetivo por correo
     try:
         subject = "Avatars vs Rooks: solicitud de administrador aprobada"
         body = (
@@ -127,7 +128,7 @@ def approve_admin_by_token(token: str, approver_username: str) -> tuple[bool, st
 
 def reject_admin_by_token(token: str, approver_username: str) -> tuple[bool, str]:
     """
-    Rechaza una solicitud por token (opcional).
+    Rechaza una solicitud por token.
     """
     approver_doc = db.collection("users").document(approver_username.lower()).get()
     if not approver_doc.exists:
@@ -144,14 +145,14 @@ def reject_admin_by_token(token: str, approver_username: str) -> tuple[bool, str
     if req.get("status") != "pending":
         return False, "Esta solicitud ya fue procesada."
 
-    # Actualizar solicitud
+    # Actualizar solicitud como rechazada
     db.collection("admin_approvals").document(token).update({
         "status": "rejected",
         "rejected_by": approver_username,
         "rejected_at": datetime.now(timezone.utc).isoformat()
     })
 
-    # Opcional: notificar al usuario objetivo
+    # Notificar al usuario objetivo
     try:
         subject = "Avatars vs Rooks: solicitud de administrador rechazada"
         body = (
