@@ -4,9 +4,7 @@ import requests
 from DBconfig.firebase_config import db, API_KEY
 
 
-
 # VALIDACIÓN DE DATOS DE USUARIO
-
 
 def validar_datos_usuario(data: dict) -> tuple[bool, str]:
     """
@@ -15,7 +13,7 @@ def validar_datos_usuario(data: dict) -> tuple[bool, str]:
     Requisitos:
     - role: 'player' o 'admin'
     - username: 3-20 caracteres alfanuméricos o guiones bajos
-    - password: mínimo 6 caracteres
+    - password: entre 6 y 12 caracteres, al menos una mayúscula y un carácter especial
     - email válido
     - Si role = 'admin' → requiere name, lastname, nationality
     """
@@ -29,8 +27,13 @@ def validar_datos_usuario(data: dict) -> tuple[bool, str]:
     if not re.match(r"[^@]+@[^@]+\.[^@]+", data.get("email", "")):
         return False, "Correo electrónico inválido."
 
-    if len(data.get("password", "")) < 6:
-        return False, "La contraseña debe tener al menos 6 caracteres."
+    password = data.get("password", "")
+    if len(password) < 6 or len(password) > 12:
+        return False, "La contraseña debe tener entre 6 y 12 caracteres."
+    if not re.search(r"[A-Z]", password):
+        return False, "La contraseña debe contener al menos una letra mayúscula."
+    if not re.search(r"[^a-zA-Z0-9]", password):
+        return False, "La contraseña debe contener al menos un carácter especial."
 
     # Validaciones específicas del administrador
     if data["role"] == "admin":
@@ -41,9 +44,7 @@ def validar_datos_usuario(data: dict) -> tuple[bool, str]:
     return True, "Validación exitosa."
 
 
-
 # MÉTODOS AUXILIARES
-
 
 def hash_password(password: str) -> str:
     """
@@ -70,9 +71,7 @@ def registrar_en_firebase_auth(email: str, password: str) -> tuple[bool, str | N
         return False, f"Error de Firebase Auth: {response.json()}"
 
 
-
 # REGISTRO DE USUARIO EN FIREBASE
-
 
 def registrar_usuario(data: dict) -> tuple[bool, str]:
     """

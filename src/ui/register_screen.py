@@ -3,25 +3,25 @@ import pygame
 from src.config import settings
 from src.utils.input_box import InputBox
 from src.utils.buttons import Button
-from src.utils.dropdown import Dropdown  # Selector simple para rol
-from src.utils.searchable_dropdown import SearchableDropdown, load_countries  # Selector con búsqueda para país
+from src.utils.dropdown import Dropdown
+from src.utils.searchable_dropdown import SearchableDropdown, load_countries
 from src.auth.register_user import registrar_usuario
 
 
 class RegisterScreen:
     def __init__(self, screen):
         self.screen = screen
-        self.font = pygame.font.SysFont(settings.FONT_FAMILY, settings.FONT_TITLE_SIZE)  # Fuente principal
-        self.small_font = pygame.font.SysFont(settings.FONT_FAMILY, settings.FONT_DEFAULT_SIZE)  # Fuente secundaria
+        self.font = pygame.font.SysFont(settings.FONT_FAMILY, settings.FONT_TITLE_SIZE)
+        self.small_font = pygame.font.SysFont(settings.FONT_FAMILY, settings.FONT_DEFAULT_SIZE)
         self.running = True
         self.message = ""
         self.message_color = (255, 0, 0)
 
-        # Cargar países desde assets
+        # Cargar países
         countries_path = os.path.join("src", "assets", "data", "countries.json")
         self.countries = load_countries(countries_path)
 
-        # Dropdown de rol (simple, 2 opciones)
+        # Dropdown de rol
         self.role_dropdown = Dropdown(
             x=440, y=130, width=400, height=40,
             font=self.font,
@@ -40,7 +40,7 @@ class RegisterScreen:
         self.name_box = InputBox(440, 380, 400, 40, self.font, placeholder="Name")
         self.lastname_box = InputBox(440, 440, 400, 40, self.font, placeholder="Last name")
 
-        # Selector de país para admin (con búsqueda)
+        # Dropdown de país con búsqueda
         self.country_dropdown = SearchableDropdown(
             x=440, y=500, width=400, height=40,
             font=self.font,
@@ -50,7 +50,7 @@ class RegisterScreen:
             text_color=(0, 0, 0),
             placeholder="Select a country…",
             max_visible=10,
-            item_height=28
+            item_height=38
         )
 
         # Botones
@@ -69,8 +69,8 @@ class RegisterScreen:
             self.name_box.handle_event(event)
             self.lastname_box.handle_event(event)
 
-            self.role_dropdown.handle_event(event)       # Rol simple
-            self.country_dropdown.handle_event(event)    # País con búsqueda
+            self.role_dropdown.handle_event(event)
+            self.country_dropdown.handle_event(event)
 
             if self.register_button.event_mouse(event):
                 self.registrar_usuario()
@@ -80,7 +80,6 @@ class RegisterScreen:
         return None
 
     def _role(self) -> str:
-        # Obtiene el rol seleccionado del dropdown simple
         selected = self.role_dropdown.get_selected()
         return selected if selected in ("player", "admin") else "player"
 
@@ -98,7 +97,6 @@ class RegisterScreen:
             data["name"] = self.name_box.get_text()
             data["lastname"] = self.lastname_box.get_text()
 
-            # País seleccionado requerido
             selected_country = self.country_dropdown.get_selected()
             if selected_country is None:
                 self.message = "Please select a country for admin."
@@ -128,10 +126,10 @@ class RegisterScreen:
         self.email_box.draw(self.screen)
         self.password_box.draw(self.screen)
 
-        # Rol (simple)
+        # Rol
         self.role_dropdown.draw(self.screen)
 
-        # Campos admin (sin dibujar aún el country dropdown)
+        # Campos admin
         is_admin = self._role() == "admin"
         if is_admin:
             self.name_box.draw(self.screen)
@@ -141,15 +139,15 @@ class RegisterScreen:
         self.back_button.draw(self.screen)
         self.register_button.draw(self.screen)
 
-        # Dibujar el country dropdown al final por encima de los botones
-        if is_admin:
-            self.country_dropdown.draw(self.screen)
-
-        # Mensaje
+        # Dibujar el mensaje antes del dropdown queda detrás visualmente
         if self.message:
             msg_surface = self.font.render(self.message, True, self.message_color)
-            msg_rect = msg_surface.get_rect(center=(settings.WINDOW_WIDTH // 2, 720))
+            msg_rect = msg_surface.get_rect(center=(settings.WINDOW_WIDTH // 2, 580))
             self.screen.blit(msg_surface, msg_rect)
+
+        # Dropdown de país al final  se dibuja por encima de todo
+        if is_admin:
+            self.country_dropdown.draw(self.screen)
 
         pygame.display.flip()
 
