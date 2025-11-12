@@ -1,4 +1,14 @@
-import os
+# --- ensure project root on sys.path (no tocar fuera de ui/) ---
+import os, sys
+SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))       # .../src
+PROJECT_ROOT = os.path.abspath(os.path.join(SRC_DIR, '..'))                    # repo root
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+# ---------------------------------------------------------------
+
+from src.gameplay.main_matrix_2 import Game
+
+
 import pygame
 from src.config import settings
 from src.utils.buttons import Button
@@ -6,6 +16,7 @@ from src.utils.input_box import InputBox
 from src.utils.spotify_api_configuration import MusicAPI
 from src.utils.buttons_with_images import ButtonWithImage
 from src.config.settings import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI
+
 
 class MainWindow:
 
@@ -400,7 +411,7 @@ class MainWindow:
                     self.actual_menu_layout = "Configuration"
 
                 if self.play_button.event_mouse(event):
-                    pass
+                    newgame = Game.run()
 
                 if self.user_ranking_button.event_mouse(event):
                     pass

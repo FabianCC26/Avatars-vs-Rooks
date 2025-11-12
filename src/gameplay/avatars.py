@@ -36,7 +36,8 @@ class Avatar:
     def attack(self, rook, tiempo_actual=None):
         if tiempo_actual is None:
             tiempo_actual = pygame.time.get_ticks()
-        if tiempo_actual - self.last_attack_time >= self.frecuencia_ataque * 100:
+
+        if tiempo_actual - self.last_attack_time >= self.frecuencia_ataque:
             rook.vida -= self.daño
             self.last_attack_time = tiempo_actual
 

@@ -8,8 +8,6 @@ from rooks import Rook
 from avatars import Avatar
 from projectile import Projectile
 
-
-
 pygame.init()
 
 ANCHO = config.WINDOW_WIDTH
@@ -90,8 +88,10 @@ while running:
     screen.fill(config.BACKGROUND_COLOR)
 
     for evt in pygame.event.get():
+
         if evt.type == pygame.QUIT:
             running = False
+
         elif evt.type == pygame.MOUSEBUTTONDOWN and evt.button == 1 and not game_over:
             col, row = grid_from_mouse(pygame.mouse.get_pos())
             if col > 0:  # No en la columna de derrota
@@ -111,6 +111,7 @@ while running:
                 rook_selected = "fuego"
             elif evt.key == pygame.K_4:
                 rook_selected = "agua"
+
             elif evt.key == pygame.K_r:
                 coins = config.INITIAL_COINS
                 rooks.clear()
@@ -124,43 +125,46 @@ while running:
         spawn_avatar()
         last_spawn = time.time()
 
-    now = time.time()
-    for r in rooks[:]:
-        r.update(now, avatars, projectiles)
-        if r.vida > 0:
-            r.draw(screen)
-        else:
-            rooks.remove(r)
-
-    for p in projectiles[:]:
-        p.update()
-        p.draw(screen)
-        if p.x > ANCHO + 50:
-            projectiles.remove(p)
-
-    now = time.time()
-    for a in avatars[:]:
-        a.update(now, rooks)
-        a.draw(screen)
+    if not game_over:    
+        now = time.time()
         for r in rooks[:]:
-            if a.can_attack(r):
-                a.attack(r)
-            if r.vida <= 0 and r in rooks:
+            r.update(now, avatars, projectiles)
+            if r.vida > 0:
+                r.draw(screen)
+            else:
                 rooks.remove(r)
-        if a.rect.left < CELL_W:
-            game_over = True
-        if a.vida <= 0:
-            avatars.remove(a)
-            coins += config.COINS_PER_KILL
-        else:
-            a.draw(screen)
 
-    handle_projectile_collisions()
+        for p in projectiles[:]:
+            p.update()
+            pygame.draw.circle(screen, (255, 0, 0), p.rect.center, 2)
+            p.draw(screen)
+            if p.rect.left > ANCHO + 50:
+                projectiles.remove(p)
 
-    draw_grid()
-    draw_text(f"Monedas: {coins}", (10, 6))
-    draw_text(f"Rook: {rook_selected}", (10, 34))
-    draw_text("1:Arena 2:Roca 3:Fuego 4:Agua  R:Reiniciar", (10, 60), (180, 180, 255))
+        now = time.time()
+        
+        for a in avatars[:]:
+            a.update(now, rooks)
+            for r in rooks[:]:
+                if a.can_attack(r):
+                    a.attack(r)
+                if r.vida <= 0 and r in rooks:
+                    rooks.remove(r)
+            if a.rect.left < CELL_W:
+                game_over = True
+            if a.vida <= 0:
+                avatars.remove(a)
+                coins += config.COINS_PER_KILL
+            else:
+                a.draw(screen)                   
+
+
+        handle_projectile_collisions()
+
+        draw_grid()
+        draw_text(f"Monedas: {coins}", (10, 6))
+        draw_text(f"Rook: {rook_selected}", (10, 34))
+        draw_text("1:Arena 2:Roca 3:Fuego 4:Agua  R:Reiniciar", (10, 60), (180, 180, 255))
 
     if game_over:
         draw_text("¡Has perdido! Presiona R para reiniciar o ESC para salir", (ANCHO // 4, ALTO // 2), (255, 60, 60))

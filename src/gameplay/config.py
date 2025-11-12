@@ -42,16 +42,16 @@ ROOK_ATACK_INTERVAL = 10
 ROOK_STATS = {
     "arena": {
         "vida": 100,
-        "daño": 15,
-        "rango": 1,
+        "daño": 7,
+        "rango": 250,
         "velocidad_ataque": 1.0,
         "cost": 50,
         "color": (194, 178, 128)
     },
     "roca": {
         "vida": 200,
-        "daño": 25,
-        "rango": 1,
+        "daño": 15,
+        "rango": 350,
         "velocidad_ataque": 1.2,
         "cost": 100,
         "color": (120, 120, 120)
@@ -59,7 +59,7 @@ ROOK_STATS = {
     "fuego": {
         "vida": 80,
         "daño": 40,
-        "rango": 3,
+        "rango": 400,
         "velocidad_ataque": 0.6,
         "cost": 150,
         "color": (255, 80, 0)
@@ -67,7 +67,7 @@ ROOK_STATS = {
     "agua": {
         "vida": 100,
         "daño": 20,
-        "rango": 2,
+        "rango": 250,
         "velocidad_ataque": 0.8,
         "cost": 150,
         "color": (0, 120, 255)
@@ -80,7 +80,7 @@ ROOK_STATS = {
 
 AVATAR_STATS = {
     "Avatar_Flechador": {
-        "vida": 5,                 # Resistencia (puntos)
+        "vida": 15,                 # Resistencia (puntos)
         "velocidad": 12,           # Velocidad de avance (cada X seg)
         "daño": 2,                 # Poder de ataque
         "frecuencia_ataque": 10,   # Cada X seg
@@ -88,7 +88,7 @@ AVATAR_STATS = {
         "color": (255, 255, 51)
     },
     "Avatar_Escudero": {
-        "vida": 10,
+        "vida": 20,
         "velocidad": 10,
         "daño": 3,
         "frecuencia_ataque": 15,
@@ -96,7 +96,7 @@ AVATAR_STATS = {
         "color": (64, 64, 64)
     },
     "Avatar_Leñador": {
-        "vida": 20,
+        "vida": 25,
         "velocidad": 13,
         "daño": 9,
         "frecuencia_ataque": 5,  # si hay torre enfrente
@@ -104,7 +104,7 @@ AVATAR_STATS = {
         "color": (102, 0, 0)
     },
     "Avatar_Canibal": {
-        "vida": 25,
+        "vida": 30,
         "velocidad": 14,
         "daño": 12,
         "frecuencia_ataque": 3,  # si hay torre enfrente

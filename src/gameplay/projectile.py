@@ -1,20 +1,22 @@
-# entities/projectile.py
+
 import pygame
+import config
+
 
 class Projectile:
-    def __init__(self, x, y, damage, color=(255,255,255)):
-        self.x = x
-        self.y = y
-        self.speed = 6
+    def __init__(self, x, y, damage=1, speed=8, size=10, color=(255, 255, 0)):
         self.damage = damage
-        self.color = color
-        self.width = 10
-        self.height = 6
-        self.rect = pygame.Rect(int(self.x), int(self.y), self.width, self.height)
+        self.speed = speed
+        self.color = (0,0,0)
+        self.rect = pygame.Rect(0, 0, size, size)
+        self.rect.center = (x, y)
+
+    # (compatibilidad si en el main usas p.x)
+    def x(self):
+        return self.rect.x
 
     def update(self):
-        self.x += self.speed
-        self.rect.x = int(self.x)
+        self.rect.x += self.speed
 
-    def draw(self, screen):
-        pygame.draw.rect(screen, self.color, self.rect)
+    def draw(self, surf):
+        pygame.draw.rect(surf, self.color, self.rect)
