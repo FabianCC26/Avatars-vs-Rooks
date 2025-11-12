@@ -4,7 +4,8 @@ import config
 class Avatar:
     def __init__(self, x, y, tipo):
         stats = config.AVATAR_STATS[tipo]
-
+        self.y = y
+        self.x = x
         self.avatar_type = tipo
         self.vida = stats["vida"]
         self.velocidad = stats["velocidad"]
@@ -13,10 +14,16 @@ class Avatar:
         self.tipo = stats["tipo"]
         self.color = stats["color"]
 
+
+
         self.last_attack_time = 0
 
         # Crear el rectángulo de colisión y posición inicial
-        self.rect = pygame.Rect(x, y, config.CELL_W, config.CELL_H)
+        self.rect = pygame.Rect(0, 0, config.CELL_W, config.CELL_H)
+        self.rect.center = (x + config.CELL_W // 2, y + config.CELL_H // 2)
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, self.color, self.rect)
 
     def move(self):
         """Movimiento hacia la izquierda constante (enemigos que avanzan)."""
@@ -28,8 +35,9 @@ class Avatar:
         """Determina si puede atacar a una torre cercana."""
         return self.rect.colliderect(rook.rect)
 
-    def attack(self, rook, tiempo_actual):
-        """Ataca una torre si está lista para hacerlo."""
+    def attack(self, rook, tiempo_actual=None):
+        if tiempo_actual is None:
+            tiempo_actual = pygame.time.get_ticks()
         if tiempo_actual - self.last_attack_time >= self.frecuencia_ataque * 100:
             rook.vida -= self.daño
             self.last_attack_time = tiempo_actual
