@@ -20,16 +20,14 @@ class Avatar:
 
         # Crear el rectángulo de colisión y posición inicial
         self.rect = pygame.Rect(0, 0, config.CELL_W, config.CELL_H)
-        self.rect.center = (x + config.CELL_W // 2, y + config.CELL_H // 2)
+        self.rect.center = (x, y)
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.color, self.rect)
 
     def move(self):
         """Movimiento hacia la izquierda constante (enemigos que avanzan)."""
-        self.rect.x -= 1  # velocidad base
-        # Puedes usar self.velocidad si querés un movimiento más rápido
-        # self.rect.x -= self.velocidad * 0.1
+        self.rect.x -= 1
 
     def can_attack(self, rook):
         """Determina si puede atacar a una torre cercana."""
