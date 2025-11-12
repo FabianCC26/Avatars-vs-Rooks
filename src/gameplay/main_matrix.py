@@ -4,9 +4,11 @@ import time
 import sys
 
 import config
-from entities.rook import Rook
-from entities.avatar import Avatar
-from entities.projectile import Projectile
+from rooks import Rook
+from avatars import Avatar
+from projectile import Projectile
+
+
 
 pygame.init()
 
@@ -67,6 +69,7 @@ def spawn_avatar():
     y = row * CELL_H + CELL_H // 2
     tipo = random.choice(list(config.AVATAR_STATS.keys()))
     avatars.append(Avatar(ANCHO + 10, y, tipo))
+    
 
 
 def handle_projectile_collisions():
@@ -74,9 +77,9 @@ def handle_projectile_collisions():
     for p in projectiles[:]:
         for a in avatars[:]:
             if p.rect.colliderect(a.rect):
-                a.health -= p.damage
+                a.vida -= p.damage
                 projectiles.remove(p)
-                if a.health <= 0:
+                if a.vida <= 0:
                     avatars.remove(a)
                     coins += config.COINS_PER_KILL
                 break
@@ -141,7 +144,7 @@ while running:
         a.draw(screen)
         for r in rooks[:]:
             if a.can_attack(r):
-                a.attack_rook(r)
+                a.attack(r)
             if r.vida <= 0 and r in rooks:
                 rooks.remove(r)
         if a.rect.left < CELL_W:

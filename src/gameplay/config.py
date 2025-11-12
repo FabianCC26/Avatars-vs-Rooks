@@ -85,7 +85,7 @@ AVATAR_STATS = {
         "daño": 2,                 # Poder de ataque
         "frecuencia_ataque": 10,   # Cada X seg
         "tipo": "rango",
-        "color": (194, 178, 128)
+        "color": (255, 255, 51)
     },
     "Avatar_Escudero": {
         "vida": 10,
@@ -93,7 +93,7 @@ AVATAR_STATS = {
         "daño": 3,
         "frecuencia_ataque": 15,
         "tipo": "melee",
-        "color": (100, 100, 100)
+        "color": (64, 64, 64)
     },
     "Avatar_Leñador": {
         "vida": 20,
@@ -101,7 +101,7 @@ AVATAR_STATS = {
         "daño": 9,
         "frecuencia_ataque": 5,  # si hay torre enfrente
         "tipo": "melee",
-        "color": (255, 80, 0)
+        "color": (102, 0, 0)
     },
     "Avatar_Canibal": {
         "vida": 25,
@@ -109,6 +109,6 @@ AVATAR_STATS = {
         "daño": 12,
         "frecuencia_ataque": 3,  # si hay torre enfrente
         "tipo": "melee",
-        "color": (0, 120, 255)
+        "color": (204, 0, 102)
     }
 }
