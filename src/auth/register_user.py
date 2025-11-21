@@ -119,7 +119,8 @@ def registrar_usuario(data: dict) -> tuple[bool, str]:
             "email": email,
             "password": hashed_password,              # Nunca guardar en claro
             "uid": uid,
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "best_score": 0 if data["role"] == "player" else None
         }
 
         if data["role"] == "admin":
