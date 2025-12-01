@@ -19,7 +19,7 @@ ultima_direccion = None
 
 # Tiempo hasta el que el LED de guardado debe permanecer encendido (en ms)
 guardado_activo_hasta = 0          
-TIEMPO_GUARDADO_MS = 1000          # 1 segundo
+TIEMPO_GUARDADO_MS = 3000          # 1 segundo
 
 while True:
     # Leer valores crudos de los potenciometros
