@@ -1,114 +1,136 @@
-# ============================
-# CONFIGURACIÓN GENERAL DEL JUEGO
-# ============================
+import pygame
 
-#ANCHO = 900
-#ALTO = 600
+# ----------------- GRID / VENTANA -----------------
+GRID_ROWS = 9
+GRID_COLS = 5
 
-# Dimensiones de la ventana
-WINDOW_WIDTH = 1000
-WINDOW_HEIGHT = 600
+CELL_SIZE = 70  # solo por referencia
+WINDOW_WIDTH = GRID_COLS * CELL_SIZE
+WINDOW_HEIGHT = GRID_ROWS * CELL_SIZE
 
-# Tamaño de cada celda de la cuadrícula
-CELL_SIZE = 100
-CELL_W = 60
-CELL_H = 60
+# ----------------- COLORES -----------------
+BACKGROUND_COLOR = (20, 20, 20)
+GRID_COLOR = (80, 80, 80)
+TEXT_COLOR = (255, 255, 255)
 
-# Dimensiones de la matriz
-GRID_COLS = 9
-GRID_ROWS = 6
+# ----------------- ECONOMÍA -----------------
+INITIAL_COINS = 100
+COINS_PER_KILL = 75   # de la tabla: 75 monedas por avatar eliminado
 
-# Color del fondo
-BACKGROUND_COLOR = (230, 230, 230)
-GRID_COLOR = (200, 200, 200)
-LEFT_ZONE_COLOR = (180, 220, 180)  # color diferente para la primera columna
-TEXT_COLOR = (0,0,0)
+# ----------------- SPAWN -----------------
+SPAWN_INTERVAL = 3.0  # segundos entre spawns
 
-# Monedas iniciales
-INITIAL_COINS = 150
+# ----------------- PROYECTILES -----------------
+PROJECTILE_SPEED = 8
 
-# Tiempo entre aparición de avatares (en segundos)
-SPAWN_INTERVAL = 10
-
-# Recompensa por eliminar un avatar
-COINS_PER_KILL = 75
-
-# ============================
-# STATS DE LOS ROOKS (DEFENSORES)
-# ============================
-
-ROOK_ATACK_INTERVAL = 10
+# ======================================================
+# ROOKS (torres) — basado en “Resumen de los Rooks”
+# ======================================================
+# Nota: en tu código interno usas "arena", "roca", "fuego", "agua",
+# así que mapeamos:
+#   Sand Rook  -> "arena"
+#   Rock Rook  -> "roca"
+#   Fire Rook  -> "fuego"
+#   Water Rook -> "agua"
+#
+# Ataque = daño
+# Resistencia = vida
+# Frecuencia de ataque = 4 s para todas las rooks (dato adicional)
 
 ROOK_STATS = {
-    "arena": {
-        "vida": 100,
-        "daño": 15,
-        "rango": 1,
-        "velocidad_ataque": 1.0,
+    "arena": {  # Sand Rook
+        "vida": 3,
+        "daño": 2,
+        "rango": 200,               # píxeles (puedes ajustarlo)
+        "velocidad_ataque": 4.0,    # segundos entre disparos
+        "color": (210, 180, 140),
         "cost": 50,
-        "color": (194, 178, 128)
     },
-    "roca": {
-        "vida": 200,
-        "daño": 25,
-        "rango": 1,
-        "velocidad_ataque": 1.2,
+    "roca": {  # Rock Rook
+        "vida": 14,
+        "daño": 4,
+        "rango": 200,
+        "velocidad_ataque": 4.0,
+        "color": (100, 100, 100),
         "cost": 100,
-        "color": (120, 120, 120)
     },
-    "fuego": {
-        "vida": 80,
-        "daño": 40,
-        "rango": 3,
-        "velocidad_ataque": 0.6,
+    "fuego": {  # Fire Rook
+        "vida": 16,
+        "daño": 8,
+        "rango": 200,
+        "velocidad_ataque": 4.0,
+        "color": (255, 80, 0),
         "cost": 150,
-        "color": (255, 80, 0)
     },
-    "agua": {
-        "vida": 100,
-        "daño": 20,
-        "rango": 2,
-        "velocidad_ataque": 0.8,
+    "agua": {  # Water Rook
+        "vida": 16,
+        "daño": 8,
+        "rango": 200,
+        "velocidad_ataque": 4.0,
+        "color": (0, 120, 255),
         "cost": 150,
-        "color": (0, 120, 255)
-    }
+    },
 }
 
-# ============================
-# STATS DE LOS AVATARES (ENEMIGOS)
-# ============================
+# ======================================================
+# AVATARS — basado en “Resumen de los Avatars”
+# ======================================================
+# Tabla:
+#  Flechador: ataque 2, resis 5,  avanza cada 12 s, ataca cada 10 s
+#  Escudero:  ataque 3, resis 10, avanza cada 10 s, ataca cada 15 s
+#  Leñador:   ataque 9, resis 20, avanza cada 13 s, ataca cada 5 s (si hay torre)
+#  Caníbal:   ataque 12, resis 25, avanza cada 14 s, ataca cada 3 s (si hay torre)
+#
+# En tu clase Avatar usas:
+#   vida      -> resistencia
+#   daño      -> poder de ataque
+#   velocidad -> píxeles por frame
+#
+# Tomamos que “avanza cada X segundos” ≈ tarda X s en recorrer UNA casilla.
+# Como la casilla vale 70 px y asumimos 60 FPS:
+# velocidad(px/frame) = 70 / (60 * X)
 
 AVATAR_STATS = {
-    "Avatar_Flechador": {
-        "vida": 5,                 # Resistencia (puntos)
-        "velocidad": 12,           # Velocidad de avance (cada X seg)
-        "daño": 2,                 # Poder de ataque
-        "frecuencia_ataque": 10,   # Cada X seg
-        "tipo": "rango",
-        "color": (194, 178, 128)
+    "flechador": {
+        "vida": 5,
+        "daño": 0.2,
+        "velocidad": 70 / (12*10),  # ≈ 0.0972
+        "attack_interval": 10.0,
+        "color": (200, 220, 255),
+        "rango":200,
     },
-    "Avatar_Escudero": {
+    "escudero": {
         "vida": 10,
-        "velocidad": 10,
-        "daño": 3,
-        "frecuencia_ataque": 15,
-        "tipo": "melee",
-        "color": (100, 100, 100)
+        "daño": 0.3,
+        "velocidad": 70 / (10*10),  # ≈ 0.1167
+        "attack_interval": 15.0,
+        "color": (180, 200, 255),
+        "rango":200,
     },
-    "Avatar_Leñador": {
+    "lenador": {
         "vida": 20,
-        "velocidad": 13,
-        "daño": 9,
-        "frecuencia_ataque": 5,  # si hay torre enfrente
-        "tipo": "melee",
-        "color": (255, 80, 0)
+        "daño": 0.9,
+        "velocidad": 70 / (13*10),  # ≈ 0.0897
+        "attack_interval": 5.0,
+        "color": (150, 255, 150),
+        "rango":200,
     },
-    "Avatar_Canibal": {
+    "canibal": {
         "vida": 25,
-        "velocidad": 14,
         "daño": 12,
-        "frecuencia_ataque": 3,  # si hay torre enfrente
-        "tipo": "melee",
-        "color": (0, 120, 255)
-    }
+        "velocidad": 70 / (14*10),  # ≈ 0.0833
+        "attack_interval": 3.0,
+        "color": (255, 150, 150),
+        "rango":200,
+    },
+}
+
+# ----------------- PROBABILIDADES DE SPAWN -----------------
+# Puedes cambiar estos pesos si quieres hacer el juego más o menos difícil.
+# La suma no tiene que ser 1, random.choices normaliza internamente.
+AVATAR_SPAWN_WEIGHTS = {
+    "flechador": 0.35,
+    "escudero": 0.30,
+    "lenador":  0.20,
+    "canibal":  0.15,
 }
