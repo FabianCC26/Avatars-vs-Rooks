@@ -1,14 +1,7 @@
-import os
+import firebase_admin
+from firebase_admin import credentials, firestore, auth
 
-json_path = os.path.join("DBconfig", "avatar-vs-rooks-firebase-adminsdk-fbsvc-20a18344a3.json")
-
-# Si el archivo NO existe → estamos en pytest o falta el archivo → NO iniciar Firebase
-if not os.path.exists(json_path):
-    db = None
-else:
-    import firebase_admin
-    from firebase_admin import credentials, firestore
-
-    cred = credentials.Certificate(json_path)
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
+cred = credentials.Certificate("DBconfig/avatar-vs-rooks-firebase-adminsdk-fbsvc-20a18344a3.json")
+firebase_admin.initialize_app(cred)
+API_KEY = "AIzaSyB0vNKFTx8_3PYNU0VAb7CXCvhMlfN6PYg" 
+db = firestore.client()
