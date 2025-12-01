@@ -8,7 +8,7 @@ from src.utils.buttons_with_images import ButtonWithImage
 from src.config.settings import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI
 from src.ui.info_window import InfoWindow
 from src.utils.user_preferences import load_user_preferences, save_user_preferences  # ✅ Nuevo import
-
+from src.gameplay.main_matrix import MatrixGame
 
 class MainWindow:
 
@@ -243,7 +243,6 @@ class MainWindow:
         self.info_button.hover_color = self.button_dark_hoover
         self.main_menu_draw()
 
-        # ✅ Guardar preferencia
         self.preferences["theme"] = "dark"
         save_user_preferences(self.username, self.preferences)
 
@@ -274,7 +273,7 @@ class MainWindow:
         self.info_button.hover_color = self.button_light_hoover
         self.main_menu_draw()
 
-        # ✅ Guardar preferencia
+       
         self.preferences["theme"] = "light"
         save_user_preferences(self.username, self.preferences)
 
@@ -292,7 +291,7 @@ class MainWindow:
         self.info_button.text_color = color
         self.main_menu_draw()
 
-        # ✅ Guardar preferencia
+    
         self.preferences["color"] = list(color)
         save_user_preferences(self.username, self.preferences)
 
@@ -331,6 +330,11 @@ class MainWindow:
                 if self.configuration_button.event_mouse(event):
                     self.actual_menu_layout = "Configuration"
 
+
+                if self.play_button.event_mouse(event):
+                    game = MatrixGame()
+                    game.run()
+                
                 if self.info_button.event_mouse(event):
                     from src.ui.info_window import InfoWindow
                     theme_colors = {

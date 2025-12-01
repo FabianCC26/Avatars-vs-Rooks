@@ -1,168 +1,356 @@
+import os
+import sys
+
+# ---- Arreglo de rutas para poder usar 'src' como paquete de nivel superior ----
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if ROOT not in sys.path:
+    sys.path.append(ROOT)
+
 import pygame
 import random
 import time
-import sys
 
-import config
-from entities.rook import Rook
-from entities.avatar import Avatar
-from entities.projectile import Projectile
+from src.gameplay import config
+from src.gameplay.rooks import Rook
+from src.gameplay.avatars import Avatar
+from src.gameplay.projectile import Projectile
 
-pygame.init()
+class MatrixGame:
 
-ANCHO = config.WINDOW_WIDTH
-ALTO = config.WINDOW_HEIGHT
-FILAS = config.GRID_ROWS
-COLUMNAS = config.GRID_COLS
-CELL_W = config.WINDOW_WIDTH // config.GRID_COLS
-CELL_H = config.WINDOW_HEIGHT // config.GRID_ROWS
+    COIN_SPAWN_INTERVAL = 6.0  # segundos entre intentos de generar moneda
 
-screen = pygame.display.set_mode((ANCHO, ALTO))
-pygame.display.set_caption("Rooks vs Avatars - 9x6")
+    def __init__(self):
+        pygame.init()
 
-font = pygame.font.Font(None, 28)
-clock = pygame.time.Clock()
+        # ------------------ Ventana y matriz ------------------
+        self.WINDOW_W = 1280
+        self.WINDOW_H = 720
+        self.ANCHO = self.WINDOW_W
+        self.ALTO = self.WINDOW_H
 
-# Estado del juego
-coins = config.INITIAL_COINS
-rooks = []
-avatars = []
-projectiles = []
-last_spawn = time.time()
-rook_selected = "arena"
-running = True
-game_over = False
+        # Grid
+        self.FILAS = config.GRID_ROWS
+        self.COLUMNAS = config.GRID_COLS
 
+        self.CELL_W = 70
+        self.CELL_H = 70
 
-def draw_text(txt, pos, color=config.TEXT_COLOR):
-    surf = font.render(txt, True, color)
-    screen.blit(surf, pos)
+        # Tamaño real de la matriz
+        self.MATRIX_W = self.COLUMNAS * self.CELL_W
+        self.MATRIX_H = self.FILAS * self.CELL_H
 
+        # Offset para centrar la matriz dentro de la ventana
+        self.offset_x = (self.WINDOW_W - self.MATRIX_W) // 2
+        self.offset_y = (self.WINDOW_H - self.MATRIX_H) // 2
 
-def draw_grid():
-    for r in range(FILAS):
-        for c in range(COLUMNAS):
-            rect = pygame.Rect(c * CELL_W, r * CELL_H, CELL_W, CELL_H)
-            if c == 0:
-                pygame.draw.rect(screen, config.LEFT_ZONE_COLOR, rect)
+        # Crear ventana
+        self.screen = pygame.display.set_mode((self.WINDOW_W, self.WINDOW_H))
+        pygame.display.set_caption("Rooks vs Avatars")
+
+        # ----------- FONDO COMPLETO DE LA VENTANA -----------
+        bg_path = os.path.join(ROOT, "src", "assets", "images", "matrix_bg.PNG")
+        self.full_bg = pygame.image.load(bg_path).convert()
+        self.full_bg = pygame.transform.scale(self.full_bg, (self.WINDOW_W, self.WINDOW_H))
+
+        # Fuente y clock
+        self.font = pygame.font.Font(None, 28)
+        self.clock = pygame.time.Clock()
+
+        # Estado del juego
+        self.coins = config.INITIAL_COINS
+        self.rooks = []
+        self.avatars = []
+        self.projectiles = []
+        self.last_spawn = time.time()
+        self.rook_selected = "arena"
+        self.running = True
+        self.game_over = False
+
+        # ---- TIMER DE LA PARTIDA ----
+        self.start_time = time.time()
+        self.elapsed_time = 0  # segundos acumulados (se congela al perder)
+
+        # ---- MONEDAS EN LA MATRIZ ----
+        # cada moneda: {"col": c, "row": r, "value": 25/50/75}
+        self.grid_coins = []
+        self.last_coin_spawn = time.time()
+
+    # ---------------------- Helpers de dibujo ----------------------
+
+    def draw_text(self, txt, pos, color=config.TEXT_COLOR, line_spacing=4):
+        x, y = pos
+        for line in txt.split("\n"):
+            surf = self.font.render(line, True, color)
+            self.screen.blit(surf, (x, y))
+            y += surf.get_height() + line_spacing
+
+    def draw_grid(self):
+        for r in range(self.FILAS):
+            for c in range(self.COLUMNAS):
+                rect = pygame.Rect(
+                    self.offset_x + c * self.CELL_W,
+                    self.offset_y + r * self.CELL_H,
+                    self.CELL_W,
+                    self.CELL_H,
+                )
+                pygame.draw.rect(self.screen, config.GRID_COLOR, rect, 1)
+
+    def draw_coins_on_grid(self):
+        for coin in self.grid_coins:
+            c = coin["col"]
+            r = coin["row"]
+            value = coin["value"]
+
+            center_x = self.offset_x + c * self.CELL_W + self.CELL_W // 2
+            center_y = self.offset_y + r * self.CELL_H + self.CELL_H // 2
+
+            # Moneda amarillita
+            pygame.draw.circle(self.screen, (255, 215, 0), (center_x, center_y), 15)
+            # Texto del valor
+            txt = self.font.render(str(value), True, (0, 0, 0))
+            rect = txt.get_rect(center=(center_x, center_y))
+            self.screen.blit(txt, rect)
+
+    # ---------------------- Conversión mouse/grid ----------------------
+
+    def grid_from_mouse(self, pos):
+        x, y = pos
+
+        rel_x = x - self.offset_x
+        rel_y = y - self.offset_y
+
+        if rel_x < 0 or rel_y < 0 or rel_x >= self.MATRIX_W or rel_y >= self.MATRIX_H:
+            return None, None
+
+        col = max(0, min(self.COLUMNAS - 1, rel_x // self.CELL_W))
+        row = max(0, min(self.FILAS - 1, rel_y // self.CELL_H))
+        return col, row
+
+    def center_cell(self, col, row, sprite_w, sprite_h):
+        gx = self.offset_x + col * self.CELL_W + self.CELL_W // 2
+        gy = self.offset_y + row * self.CELL_H + self.CELL_H // 2
+        return int(gx), int(gy)
+
+    # ---------------------- Lógica de monedas ----------------------
+
+    def spawn_coin(self):
+        all_cells = [(c, r) for r in range(self.FILAS) for c in range(self.COLUMNAS)]
+
+        occupied = set()
+        for r in self.rooks:
+            col, row = self.grid_from_mouse((r.rect.centerx, r.rect.centery))
+            if col is not None and row is not None:
+                occupied.add((col, row))
+
+        for coin in self.grid_coins:
+            occupied.add((coin["col"], coin["row"]))
+
+        free_cells = [cell for cell in all_cells if cell not in occupied]
+        if not free_cells:
+            return
+
+        col, row = random.choice(free_cells)
+        value = random.choice([25, 50, 75])
+
+        self.grid_coins.append({"col": col, "row": row, "value": value})
+
+    # ---------------------- Lógica de juego ----------------------
+
+    def spawn_avatar(self):
+        col = random.randint(0, self.COLUMNAS - 1)
+
+        x = self.offset_x + col * self.CELL_W + self.CELL_W // 2
+        y = self.offset_y + self.MATRIX_H + 10
+
+        tipos = list(config.AVATAR_STATS.keys())
+        pesos = [config.AVATAR_SPAWN_WEIGHTS[t] for t in tipos]
+
+        tipo = random.choices(tipos, weights=pesos, k=1)[0]
+
+        self.avatars.append(Avatar(x, y, tipo))
+
+    def handle_projectile_collisions(self):
+        for p in self.projectiles[:]:
+            hit_something = False
+
+            if getattr(p, "owner", None) == "rook":
+                for a in self.avatars[:]:
+                    if p.rect.colliderect(a.rect):
+                        a.vida -= p.damage
+                        hit_something = True
+                        if a.vida <= 0:
+                            self.avatars.remove(a)
+                            self.coins += config.COINS_PER_KILL
+                        break
+
+            elif getattr(p, "owner", None) == "avatar":
+                for r in self.rooks[:]:
+                    if p.rect.colliderect(r.rect):
+                        r.vida -= p.damage
+                        hit_something = True
+                        if r.vida <= 0 and r in self.rooks:
+                            self.rooks.remove(r)
+                        break
+
+            if hit_something and p in self.projectiles:
+                self.projectiles.remove(p)
+
+    def reset_game(self):
+        self.coins = config.INITIAL_COINS
+        self.rooks.clear()
+        self.avatars.clear()
+        self.projectiles.clear()
+        self.grid_coins.clear()
+        self.last_spawn = time.time()
+        self.last_coin_spawn = time.time()
+        self.game_over = False
+        self.start_time = time.time()
+        self.elapsed_time = 0  # reset del timer
+
+    # ---------------------- Manejo de eventos ----------------------
+
+    def handle_events(self):
+        for evt in pygame.event.get():
+            if evt.type == pygame.QUIT:
+                self.running = False
+
+            elif evt.type == pygame.MOUSEBUTTONDOWN and evt.button == 1 and not self.game_over:
+                col, row = self.grid_from_mouse(pygame.mouse.get_pos())
+                if col is None or row is None:
+                    return
+
+                for coin in self.grid_coins[:]:
+                    if coin["col"] == col and coin["row"] == row:
+                        self.coins += coin["value"]
+                        self.grid_coins.remove(coin)
+                        return
+
+                gx, gy = self.center_cell(col, row, 70, 70)
+                if not any((r.rect.centerx == gx and r.rect.centery == gy) for r in self.rooks):
+                    cost = config.ROOK_STATS[self.rook_selected]["cost"]
+                    if self.coins >= cost:
+                        self.rooks.append(Rook(gx, gy, self.rook_selected))
+                        self.coins -= cost
+
+            elif evt.type == pygame.KEYDOWN:
+                if evt.key == pygame.K_1:
+                    self.rook_selected = "arena"
+                elif evt.key == pygame.K_2:
+                    self.rook_selected = "roca"
+                elif evt.key == pygame.K_3:
+                    self.rook_selected = "fuego"
+                elif evt.key == pygame.K_4:
+                    self.rook_selected = "agua"
+                elif evt.key == pygame.K_r:
+                    self.reset_game()
+
+    # ---------------------- Loop principal ----------------------
+
+    def run(self):
+        while self.running:
+
+            # ---- FONDO QUE OCUPA TODA LA VENTANA ----
+            self.screen.blit(self.full_bg, (0, 0))
+
+            self.handle_events()
+            now = time.time()
+
+            # ------------------ LÓGICA CUANDO NO HAS PERDIDO ------------------
+            if not self.game_over:
+                # Actualizar timer (se congela cuando game_over = True)
+                self.elapsed_time = int(now - self.start_time)
+
+                # Spawneo de avatars
+                if (now - self.last_spawn) >= config.SPAWN_INTERVAL:
+                    self.spawn_avatar()
+                    self.last_spawn = now
+
+                # Spawneo de monedas
+                if (now - self.last_coin_spawn) >= self.COIN_SPAWN_INTERVAL:
+                    if random.random() < 0.8:
+                        self.spawn_coin()
+                    self.last_coin_spawn = now
+
+                # Rooks
+                for r in self.rooks[:]:
+                    r.update(now, self.avatars, self.projectiles)
+                    if r.vida > 0:
+                        r.draw(self.screen)
+                    else:
+                        self.rooks.remove(r)
+
+                # Projectiles
+                for p in self.projectiles[:]:
+                    p.update()
+                    p.draw(self.screen)
+                    if (
+                        p.x > self.WINDOW_W + 50
+                        or p.x < -50
+                        or p.y < -50
+                        or p.y > self.WINDOW_H + 50
+                    ):
+                        self.projectiles.remove(p)
+
+                # Avatars
+                for a in self.avatars[:]:
+                    a.update(now, self.rooks, self.projectiles)
+                    a.draw(self.screen)
+
+                    avatar_center_y = a.rect.centery
+                    row_from_y = int((avatar_center_y - self.offset_y) // self.CELL_H)
+
+                    # Si llega a la PRIMERA fila (arriba), pierdes
+                    if row_from_y <= 0:
+                        self.game_over = True
+
+                    if a.vida <= 0 and a in self.avatars:
+                        self.avatars.remove(a)
+                        self.coins += config.COINS_PER_KILL
+
+                # Colisiones de proyectiles
+                self.handle_projectile_collisions()
+
+                # UI (solo cuando el juego sigue)
+                self.draw_grid()
+                self.draw_coins_on_grid()
+                self.draw_text(f"Monedas: {self.coins}", (10, 6))
+                self.draw_text(f"Rook: {self.rook_selected}", (10, 34))
+
+                self.draw_text(
+                    "1: Arena \n2: Roca \n3: Fuego \n4: Agua  \nR: Reiniciar",
+                    (10, 60),
+                    (180, 180, 255),
+                )
+
+                # ---- TIMER EN FORMATO MM:SS ----
+                minutes = self.elapsed_time // 60
+                seconds = self.elapsed_time % 60
+                self.draw_text(f"Tiempo: {minutes:02d}:{seconds:02d}", (10, 200))
+
+            # ------------------ PANTALLA DE GAME OVER ------------------
             else:
-                pygame.draw.rect(screen, config.GRID_COLOR, rect, 1)
+                self.draw_text(
+                    "¡Has perdido!\nR: Reiniciar\nESC: Salir",
+                    (600, self.WINDOW_H // 2),
+                    (255, 60, 60),
+                )
+
+                minutes = self.elapsed_time // 60
+                seconds = self.elapsed_time % 60
+                self.draw_text(f"Tiempo: {minutes:02d}:{seconds:02d}", (600, self.WINDOW_H // 2 +80))
+
+                # Salir con ESC
+                if pygame.key.get_pressed()[pygame.K_ESCAPE]:
+                    self.running = False
+
+            pygame.display.flip()
+            self.clock.tick(60)
+
+        # Devolvemos el tiempo final congelado
+        return self.elapsed_time
 
 
-def grid_from_mouse(pos):
-    x, y = pos
-    col = max(0, min(COLUMNAS - 1, x // CELL_W))
-    row = max(0, min(FILAS - 1, y // CELL_H))
-    return col, row
-
-
-def center_cell(col, row, sprite_w, sprite_h):
-    gx = col * CELL_W + (CELL_W // 2 - sprite_w // 2)
-    gy = row * CELL_H + (CELL_H // 2 - sprite_h // 2)
-    return int(gx), int(gy)
-
-
-def spawn_avatar():
-    row = random.randint(0, FILAS - 1)
-    y = row * CELL_H + CELL_H // 2
-    tipo = random.choice(list(config.AVATAR_STATS.keys()))
-    avatars.append(Avatar(ANCHO + 10, y, tipo))
-
-
-def handle_projectile_collisions():
-    global coins
-    for p in projectiles[:]:
-        for a in avatars[:]:
-            if p.rect.colliderect(a.rect):
-                a.health -= p.damage
-                projectiles.remove(p)
-                if a.health <= 0:
-                    avatars.remove(a)
-                    coins += config.COINS_PER_KILL
-                break
-
-
-# Loop principal
-while running:
-    screen.fill(config.BACKGROUND_COLOR)
-
-    for evt in pygame.event.get():
-        if evt.type == pygame.QUIT:
-            running = False
-        elif evt.type == pygame.MOUSEBUTTONDOWN and evt.button == 1 and not game_over:
-            col, row = grid_from_mouse(pygame.mouse.get_pos())
-            if col > 0:  # No en la columna de derrota
-                gx, gy = center_cell(col, row, 50, 50)
-                if not any((r.x == gx and r.y == gy) for r in rooks):
-                    cost = config.ROOK_STATS[rook_selected]["cost"]
-                    if coins >= cost:
-                        rooks.append(Rook(gx, gy, rook_selected))
-                        coins -= cost
-
-        elif evt.type == pygame.KEYDOWN:
-            if evt.key == pygame.K_1:
-                rook_selected = "arena"
-            elif evt.key == pygame.K_2:
-                rook_selected = "roca"
-            elif evt.key == pygame.K_3:
-                rook_selected = "fuego"
-            elif evt.key == pygame.K_4:
-                rook_selected = "agua"
-            elif evt.key == pygame.K_r:
-                coins = config.INITIAL_COINS
-                rooks.clear()
-                avatars.clear()
-                projectiles.clear()
-                last_spawn = time.time()
-                game_over = False
-
-    # Spawneo de avatars
-    if not game_over and (time.time() - last_spawn) >= config.SPAWN_INTERVAL:
-        spawn_avatar()
-        last_spawn = time.time()
-
-    now = time.time()
-    for r in rooks[:]:
-        r.update(now, avatars, projectiles)
-        if r.vida > 0:
-            r.draw(screen)
-        else:
-            rooks.remove(r)
-
-    for p in projectiles[:]:
-        p.update()
-        p.draw(screen)
-        if p.x > ANCHO + 50:
-            projectiles.remove(p)
-
-    now = time.time()
-    for a in avatars[:]:
-        a.update(now, rooks)
-        a.draw(screen)
-        for r in rooks[:]:
-            if a.can_attack(r):
-                a.attack_rook(r)
-            if r.vida <= 0 and r in rooks:
-                rooks.remove(r)
-        if a.rect.left < CELL_W:
-            game_over = True
-        if a.vida <= 0:
-            avatars.remove(a)
-            coins += config.COINS_PER_KILL
-        else:
-            a.draw(screen)
-
-    handle_projectile_collisions()
-
-    draw_grid()
-    draw_text(f"Monedas: {coins}", (10, 6))
-    draw_text(f"Rook: {rook_selected}", (10, 34))
-    draw_text("1:Arena 2:Roca 3:Fuego 4:Agua  R:Reiniciar", (10, 60), (180, 180, 255))
-
-    if game_over:
-        draw_text("¡Has perdido! Presiona R para reiniciar o ESC para salir", (ANCHO // 4, ALTO // 2), (255, 60, 60))
-        if pygame.key.get_pressed()[pygame.K_ESCAPE]:
-            running = False
-
-    pygame.display.flip()
-    clock.tick(60)
+if __name__ == "__main__":
+    game = MatrixGame()
+    salida = game.run()
+    print("Salida:", salida)
