@@ -49,7 +49,7 @@ ROOK_IMAGE_SIZE = (60, 60)
 ROOK_STATS = {
     "arena": {
         "vida": 3,                   # Resistance
-        "daño": 2,                   # Attack
+        "daño": 1,                   # Attack
         "rango": 200,
         "velocidad_ataque": 4.0,     # puedes ajustar luego si quieres otro ritmo
         "image": load_img("images/rooks/arena.png", ROOK_IMAGE_SIZE),
@@ -58,7 +58,7 @@ ROOK_STATS = {
     },
     "roca": {
         "vida": 14,
-        "daño": 4,
+        "daño": 2,
         "rango": 200,
         "velocidad_ataque": 4.0,
         "image": load_img("images/rooks/roca.png", ROOK_IMAGE_SIZE),
@@ -67,7 +67,7 @@ ROOK_STATS = {
     },
     "fuego": {
         "vida": 16,
-        "daño": 8,
+        "daño": 4,
         "rango": 200,
         "velocidad_ataque": 4.0,
         "image": load_img("images/rooks/fuego.png", ROOK_IMAGE_SIZE),
@@ -75,8 +75,8 @@ ROOK_STATS = {
         "cost": 150,
     },
     "agua": {
-        "vida": 16,
-        "daño": 8,
+        "vida": 14,
+        "daño": 6,
         "rango": 200,
         "velocidad_ataque": 4.0,
         "image": load_img("images/rooks/agua.png", ROOK_IMAGE_SIZE),
@@ -101,37 +101,37 @@ ROOK_STATS = {
 AVATAR_IMAGE_SIZE = (65, 65)
 AVATAR_STATS = {
     "flechador": {  # Archer
-        "vida": 5,
-        "daño": 2,
+        "vida": 2,
+        "daño": 0.5,
         "velocidad": 0.05 * 12,     # Speed 12
-        "attack_interval": 2 / 10,  # DPS 10
+        "attack_interval": 2 ,  # DPS 10
         "color": (200, 220, 255),
         "image": load_img("images/avatars/arquero.png", AVATAR_IMAGE_SIZE),
         "rango": 200,
     },
     "escudero": {   # Squire
-        "vida": 10,
-        "daño": 3,
+        "vida": 6,
+        "daño": 0.7,
         "velocidad": 0.05 * 10,     # Speed 10
-        "attack_interval": 3 / 15,  # DPS 15
+        "attack_interval": 3,  # DPS 15
         "image": load_img("images/avatars/escudero.png", AVATAR_IMAGE_SIZE),
         "color": (180, 200, 255),
         "rango": 200,
     },
     "lenador": {    # Lumberjack
-        "vida": 20,
-        "daño": 9,
+        "vida": 3,
+        "daño": 1,
         "velocidad": 0.05 * 13,     # Speed 13
-        "attack_interval": 9 / 5,   # DPS 5
+        "attack_interval": 4,   # DPS 5
         "image": load_img("images/avatars/leñador.png", AVATAR_IMAGE_SIZE),
         "color": (150, 255, 150),
         "rango": 200,
     },
     "canibal": {    # Cannibal
-        "vida": 25,
-        "daño": 12,
+        "vida": 2,
+        "daño": 1.2,
         "velocidad": 0.05 * 14,     # Speed 14
-        "attack_interval": 12 / 3,  # DPS 3
+        "attack_interval": 6,  # DPS 3
         "image": load_img("images/avatars/canibal.png", AVATAR_IMAGE_SIZE),
         "color": (255, 150, 150),
         "rango": 200,
