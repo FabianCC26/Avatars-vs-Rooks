@@ -14,6 +14,8 @@ from src.gameplay import config
 from src.gameplay.rooks import Rook
 from src.gameplay.avatars import Avatar
 from src.gameplay.projectile import Projectile
+from src.utils.joystick_reader import JoystickReader
+
 
 class MatrixGame:
 
@@ -75,6 +77,17 @@ class MatrixGame:
         self.grid_coins = []
         self.last_coin_spawn = time.time()
 
+         
+        # ---- JOYSTICK ----
+        self.cursor_col = 0   
+        self.cursor_row = 0  
+        self.joystick = JoystickReader(port="COM6")
+        # tiempo mínimo entre movimientos consecutivos en la misma dirección (en segundos)
+        self.JOY_MOVE_INTERVAL = 0.15  # prueba con 0.2–0.3 para que se sienta cómodo
+        self.last_joy_dir = "CENTER"
+        self.last_joy_move_time = 0.0
+        self.last_joy_button = 1  # 1 = suelto, 0 = presionado
+
     # ---------------------- Helpers de dibujo ----------------------
 
     def draw_text(self, txt, pos, color=config.TEXT_COLOR, line_spacing=4):
@@ -110,6 +123,19 @@ class MatrixGame:
             txt = self.font.render(str(value), True, (0, 0, 0))
             rect = txt.get_rect(center=(center_x, center_y))
             self.screen.blit(txt, rect)
+
+    #Rectangulo que cubre la columna seleccionada en la matriz 
+    def draw_cell_cursor(self):
+        col = self.cursor_col
+        row = self.cursor_row
+
+        rect = pygame.Rect(
+            self.offset_x + col * self.CELL_W,
+            self.offset_y + row * self.CELL_H,
+            self.CELL_W,
+            self.CELL_H
+        )
+        pygame.draw.rect(self.screen,(255,255,0),rect,4)
 
     # ---------------------- Conversión mouse/grid ----------------------
 
@@ -209,6 +235,33 @@ class MatrixGame:
 
     # ---------------------- Manejo de eventos ----------------------
 
+    # ---------------------- Acción sobre una celda (moneda/rook) ----------------------
+
+    # Colocar rook o recoger monda
+    def handle_cell_action(self, col, row):
+        if col is None or row is None:
+            return
+
+        #Si hay una moneda en la celda 
+        for coin in self.grid_coins[:]:
+            if coin["col"] == col and coin["row"] == row:
+                self.coins += coin["value"]
+                self.grid_coins.remove(coin)
+                return  # ya hicimos acción
+
+        # Si no hay moneda colocar un rook
+        gx, gy = self.center_cell(col, row, 70, 70)
+
+        # Si un rook en la celda no hace nada
+        if any((r.rect.centerx == gx and r.rect.centery == gy) for r in self.rooks):
+            return  
+
+        # Verificar costo
+        cost = config.ROOK_STATS[self.rook_selected]["cost"]
+        if self.coins >= cost:
+            self.rooks.append(Rook(gx, gy, self.rook_selected))
+            self.coins -= cost
+
     def handle_events(self):
         for evt in pygame.event.get():
             if evt.type == pygame.QUIT:
@@ -216,21 +269,7 @@ class MatrixGame:
 
             elif evt.type == pygame.MOUSEBUTTONDOWN and evt.button == 1 and not self.game_over:
                 col, row = self.grid_from_mouse(pygame.mouse.get_pos())
-                if col is None or row is None:
-                    return
-
-                for coin in self.grid_coins[:]:
-                    if coin["col"] == col and coin["row"] == row:
-                        self.coins += coin["value"]
-                        self.grid_coins.remove(coin)
-                        return
-
-                gx, gy = self.center_cell(col, row, 70, 70)
-                if not any((r.rect.centerx == gx and r.rect.centery == gy) for r in self.rooks):
-                    cost = config.ROOK_STATS[self.rook_selected]["cost"]
-                    if self.coins >= cost:
-                        self.rooks.append(Rook(gx, gy, self.rook_selected))
-                        self.coins -= cost
+                self.handle_cell_action(col, row)
 
             elif evt.type == pygame.KEYDOWN:
                 if evt.key == pygame.K_1:
@@ -244,15 +283,89 @@ class MatrixGame:
                 elif evt.key == pygame.K_r:
                     self.reset_game()
 
+                # --- Navegacion del cursor con flechas ---
+                elif evt.key == pygame.K_LEFT:
+                    if self.cursor_col > 0:
+                        self.cursor_col -= 1
+
+                elif evt.key == pygame.K_RIGHT:
+                    if self.cursor_col < self.COLUMNAS - 1:
+                        self.cursor_col += 1
+
+                elif evt.key == pygame.K_UP:
+                    if self.cursor_row > 0:
+                        self.cursor_row -= 1
+
+                elif evt.key == pygame.K_DOWN:
+                    if self.cursor_row < self.FILAS - 1:
+                        self.cursor_row += 1
+                elif evt.key == pygame.K_SPACE and not self.game_over:
+                    self.handle_cell_action(self.cursor_col, self.cursor_row)
+    
+    def update_from_joystick(self):
+        """
+        Lee el estado del joystick físico y:
+        - Mueve el cursor (cursor_col, cursor_row) según la dirección.
+        - Si el botón está presionado, actúa sobre la celda seleccionada.
+        """
+        if not hasattr(self, "joystick") or self.joystick is None:
+            return
+
+        direction, button = self.joystick.read_state()
+        now = time.time()
+
+        # ---------- MOVIMIENTO DEL CURSOR CON RATE LIMIT ----------
+        if direction == "CENTER":
+            # Si suelta el joystick, "reseteamos" la última dirección
+            self.last_joy_dir = "CENTER"
+        else:
+            # Decidimos si toca movernos en esta iteración
+            should_move = False
+
+            # 1) Si cambió la dirección (ej: de LEFT a UP), movemos inmediatamente
+            if direction != self.last_joy_dir:
+                should_move = True
+            # 2) Si es la misma dirección, solo movemos si ya pasó el intervalo
+            elif now - self.last_joy_move_time >= self.JOY_MOVE_INTERVAL:
+                should_move = True
+
+            if should_move:
+                if direction == "LEFT":
+                    if self.cursor_col > 0:
+                        self.cursor_col -= 1
+                elif direction == "RIGHT":
+                    if self.cursor_col < self.COLUMNAS - 1:
+                        self.cursor_col += 1
+                elif direction == "UP":
+                    if self.cursor_row > 0:
+                        self.cursor_row -= 1
+                elif direction == "DOWN":
+                    if self.cursor_row < self.FILAS - 1:
+                        self.cursor_row += 1
+
+                # Guardamos cuándo nos movimos y en qué dirección
+                self.last_joy_move_time = now
+                self.last_joy_dir = direction
+
+        # --- Boton del joystick ---
+        # BTN:0 = PRESIONADO, BTN:1 = SUELTO
+        if button == 0 and self.last_joy_button == 1 and not self.game_over:
+            self.handle_cell_action(self.cursor_col, self.cursor_row)
+
+        self.last_joy_button = button
+    
+
     # ---------------------- Loop principal ----------------------
 
     def run(self):
+
         while self.running:
 
             # ---- FONDO QUE OCUPA TODA LA VENTANA ----
             self.screen.blit(self.full_bg, (0, 0))
 
             self.handle_events()
+            self.update_from_joystick()
             now = time.time()
 
             # ------------------ LÓGICA CUANDO NO HAS PERDIDO ------------------
@@ -313,6 +426,7 @@ class MatrixGame:
                 # UI (solo cuando el juego sigue)
                 self.draw_grid()
                 self.draw_coins_on_grid()
+                self.draw_cell_cursor()
                 self.draw_text(f"Monedas: {self.coins}", (10, 6))
                 self.draw_text(f"Rook: {self.rook_selected}", (10, 34))
 

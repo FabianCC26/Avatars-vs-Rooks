@@ -19,7 +19,7 @@ ultima_direccion = None
 
 # Tiempo hasta el que el LED de guardado debe permanecer encendido (en ms)
 guardado_activo_hasta = 0          
-TIEMPO_GUARDADO_MS = 1000          # 1 segundo
+TIEMPO_GUARDADO_MS = 2000          # 1 segundo
 
 while True:
     # Leer valores crudos de los potenciometros
@@ -52,6 +52,7 @@ while True:
     # --- Control del LED del joystick ---
     if boton_joystick == 0:
         led.value(0)   # encender 
+        print("boton presionado")
     else:
         led.value(1)   # apagar
 
