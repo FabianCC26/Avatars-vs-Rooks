@@ -21,7 +21,7 @@ class MatrixGame:
 
     COIN_SPAWN_INTERVAL = 6.0  # segundos entre intentos de generar moneda
 
-    def __init__(self):
+    def __init__(self, avatar_num):
         pygame.init()
 
         # ------------------ Ventana y matriz ------------------
@@ -64,7 +64,6 @@ class MatrixGame:
         self.avatars = []
         self.projectiles = []
         self.last_spawn = time.time()
-        #self.rook_selected = "arena"
         self.rook_types = ["arena", "roca", "fuego", "agua"]
         self.rook_selected = self.rook_types[0]  # "arena"
         self.running = True
@@ -75,20 +74,27 @@ class MatrixGame:
         self.elapsed_time = 0  # segundos acumulados (se congela al perder)
 
         # ---- MONEDAS EN LA MATRIZ ----
-        # cada moneda: {"col": c, "row": r, "value": 25/50/75}
         self.grid_coins = []
         self.last_coin_spawn = time.time()
 
-         
         # ---- JOYSTICK ----
-        self.cursor_col = 0   
-        self.cursor_row = 0  
+        self.cursor_col = 0
+        self.cursor_row = 0
         self.joystick = JoystickReader(port="COM6")
-        # tiempo mínimo entre movimientos consecutivos en la misma dirección (en segundos)
-        self.JOY_MOVE_INTERVAL = 0.15  # prueba con 0.2–0.3 para que se sienta cómodo
+        self.JOY_MOVE_INTERVAL = 0.15
         self.last_joy_dir = "CENTER"
         self.last_joy_move_time = 0.0
         self.last_joy_button = 1  # 1 = suelto, 0 = presionado
+
+        # ---- LÍMITE DE AVATARS ----
+        self.MAX_AVATARS = avatar_num          # número máximo de avatars a generar
+        self.spawned_avatars = 0      # contador de avatars generados
+        self.won = False              # True = victoria, False = derrota
+        self.continue_game = False    # se setea SOLO según win/lose
+
+        # ---- BOTÓN DE FINAL DE PARTIDA (MENÚ) ----
+        base_y = self.WINDOW_H // 2
+        self.button_menu_rect = pygame.Rect(600, base_y + 180, 260, 40)
 
     # ---------------------- Helpers de dibujo ----------------------
 
@@ -119,14 +125,11 @@ class MatrixGame:
             center_x = self.offset_x + c * self.CELL_W + self.CELL_W // 2
             center_y = self.offset_y + r * self.CELL_H + self.CELL_H // 2
 
-            # Moneda amarillita
             pygame.draw.circle(self.screen, (255, 215, 0), (center_x, center_y), 15)
-            # Texto del valor
             txt = self.font.render(str(value), True, (0, 0, 0))
             rect = txt.get_rect(center=(center_x, center_y))
             self.screen.blit(txt, rect)
 
-    #Rectangulo que cubre la columna seleccionada en la matriz 
     def draw_cell_cursor(self):
         col = self.cursor_col
         row = self.cursor_row
@@ -137,7 +140,14 @@ class MatrixGame:
             self.CELL_W,
             self.CELL_H
         )
-        pygame.draw.rect(self.screen,(255,255,0),rect,4)
+        pygame.draw.rect(self.screen, (255, 255, 0), rect, 4)
+
+    def draw_button(self, rect, text):
+        pygame.draw.rect(self.screen, (200, 200, 200), rect)      # fondo
+        pygame.draw.rect(self.screen, (50, 50, 50), rect, 2)      # borde
+        txt_surf = self.font.render(text, True, (0, 0, 0))
+        txt_rect = txt_surf.get_rect(center=rect.center)
+        self.screen.blit(txt_surf, txt_rect)
 
     # ---------------------- Conversión mouse/grid ----------------------
 
@@ -185,6 +195,10 @@ class MatrixGame:
     # ---------------------- Lógica de juego ----------------------
 
     def spawn_avatar(self):
+        # Genera un avatar SOLO si no hemos llegado al máximo.
+        if self.spawned_avatars >= self.MAX_AVATARS:
+            return
+
         col = random.randint(0, self.COLUMNAS - 1)
 
         x = self.offset_x + col * self.CELL_W + self.CELL_W // 2
@@ -196,6 +210,7 @@ class MatrixGame:
         tipo = random.choices(tipos, weights=pesos, k=1)[0]
 
         self.avatars.append(Avatar(x, y, tipo))
+        self.spawned_avatars += 1
 
     def handle_projectile_collisions(self):
         for p in self.projectiles[:]:
@@ -235,28 +250,30 @@ class MatrixGame:
         self.start_time = time.time()
         self.elapsed_time = 0  # reset del timer
 
-    # ---------------------- Manejo de eventos ----------------------
+        # Reset de límite de avatars y victoria
+        self.spawned_avatars = 0
+        self.won = False
+        self.continue_game = False   # al reiniciar, por defecto False
 
     # ---------------------- Acción sobre una celda (moneda/rook) ----------------------
 
-    # Colocar rook o recoger monda
     def handle_cell_action(self, col, row):
         if col is None or row is None:
             return
 
-        #Si hay una moneda en la celda 
+        # Si hay una moneda en la celda
         for coin in self.grid_coins[:]:
             if coin["col"] == col and coin["row"] == row:
                 self.coins += coin["value"]
                 self.grid_coins.remove(coin)
                 return  # ya hicimos acción
 
-        # Si no hay moneda colocar un rook
+        # Si no hay moneda, colocar un rook
         gx, gy = self.center_cell(col, row, 70, 70)
 
-        # Si un rook en la celda no hace nada
+        # Si ya hay un rook en la celda, no hace nada
         if any((r.rect.centerx == gx and r.rect.centery == gy) for r in self.rooks):
-            return  
+            return
 
         # Verificar costo
         cost = config.ROOK_STATS[self.rook_selected]["cost"]
@@ -265,11 +282,6 @@ class MatrixGame:
             self.coins -= cost
 
     def cycle_rook(self, direction=1):
-        """
-        Cambia self.rook_selected al siguiente tipo de rook en la lista.
-        direction = 1  -> siguiente
-        direction = -1 -> anterior (por si luego quieres ciclar hacia atrás)
-        """
         if not hasattr(self, "rook_types") or not self.rook_types:
             return
 
@@ -286,9 +298,18 @@ class MatrixGame:
             if evt.type == pygame.QUIT:
                 self.running = False
 
-            elif evt.type == pygame.MOUSEBUTTONDOWN and evt.button == 1 and not self.game_over:
-                col, row = self.grid_from_mouse(pygame.mouse.get_pos())
-                self.handle_cell_action(col, row)
+            elif evt.type == pygame.MOUSEBUTTONDOWN and evt.button == 1:
+                # Si el juego NO ha terminado: colocar rooks / recoger monedas
+                if not self.game_over:
+                    col, row = self.grid_from_mouse(pygame.mouse.get_pos())
+                    self.handle_cell_action(col, row)
+                else:
+                    # Juego terminado: revisar click en botón de menú
+                    mx, my = evt.pos
+
+                    if self.button_menu_rect.collidepoint(mx, my):
+                        # Solo cerramos el juego; NO tocamos continue_game
+                        self.running = False
 
             elif evt.type == pygame.KEYDOWN:
                 if evt.key == pygame.K_1:
@@ -300,51 +321,40 @@ class MatrixGame:
                 elif evt.key == pygame.K_4:
                     self.rook_selected = "agua"
                 elif evt.key == pygame.K_r:
+                    # Reiniciar partida (no salir)
                     self.reset_game()
                 elif evt.key == pygame.K_c:
                     self.cycle_rook(direction=1)
 
-                # --- Navegacion del cursor con flechas ---
                 elif evt.key == pygame.K_LEFT:
                     if self.cursor_col > 0:
                         self.cursor_col -= 1
-
                 elif evt.key == pygame.K_RIGHT:
                     if self.cursor_col < self.COLUMNAS - 1:
                         self.cursor_col += 1
-
                 elif evt.key == pygame.K_UP:
                     if self.cursor_row > 0:
                         self.cursor_row -= 1
-
                 elif evt.key == pygame.K_DOWN:
                     if self.cursor_row < self.FILAS - 1:
                         self.cursor_row += 1
                 elif evt.key == pygame.K_SPACE and not self.game_over:
                     self.handle_cell_action(self.cursor_col, self.cursor_row)
-    
+
     def update_from_joystick(self):
-        """
-        Lee el estado del joystick físico y:
-        - Mueve el cursor (cursor_col, cursor_row) según la dirección.
-        - Si el botón está presionado, actúa sobre la celda seleccionada.
-        """
         if not hasattr(self, "joystick") or self.joystick is None:
             return
 
         direction, button, rook_next = self.joystick.read_state()
         now = time.time()
 
-        # ---------- MOVIMIENTO DEL CURSOR CON RATE LIMIT ----------
         if direction == "CENTER":
             self.last_joy_dir = "CENTER"
         else:
             should_move = False
 
-            # 1) Si cambió la dirección (ej: de LEFT a UP), se mueve inmediatamente
             if direction != self.last_joy_dir:
                 should_move = True
-            # 2) Si es la misma dirección, solo mueve si ya pasó el intervalo
             elif now - self.last_joy_move_time >= self.JOY_MOVE_INTERVAL:
                 should_move = True
 
@@ -362,19 +372,15 @@ class MatrixGame:
                     if self.cursor_row < self.FILAS - 1:
                         self.cursor_row += 1
 
-                # Guarda cuando se movio y en que dirección
                 self.last_joy_move_time = now
                 self.last_joy_dir = direction
 
-        # --- Boton del joystick ---
-        # BTN:0 = PRESIONADO, BTN:1 = SUELTO
         if button == 0 and self.last_joy_button == 1 and not self.game_over:
             self.handle_cell_action(self.cursor_col, self.cursor_row)
-        
+
         if rook_next:
             self.cycle_rook(direction=1)
         self.last_joy_button = button
-    
 
     # ---------------------- Loop principal ----------------------
 
@@ -382,19 +388,17 @@ class MatrixGame:
 
         while self.running:
 
-            # ---- FONDO QUE OCUPA TODA LA VENTANA ----
             self.screen.blit(self.full_bg, (0, 0))
 
             self.handle_events()
             self.update_from_joystick()
             now = time.time()
 
-            # ------------------ LÓGICA CUANDO NO HAS PERDIDO ------------------
             if not self.game_over:
-                # Actualizar timer (se congela cuando game_over = True)
+                # Actualizar timer
                 self.elapsed_time = int(now - self.start_time)
 
-                # Spawneo de avatars
+                # Spawneo de avatars (solo si no se llegó al máximo)
                 if (now - self.last_spawn) >= config.SPAWN_INTERVAL:
                     self.spawn_avatar()
                     self.last_spawn = now
@@ -436,6 +440,8 @@ class MatrixGame:
                     # Si llega a la PRIMERA fila (arriba), pierdes
                     if row_from_y <= 0:
                         self.game_over = True
+                        self.won = False   # derrota
+                        self.continue_game = False  # 🔴 perdió → no continuar
 
                     if a.vida <= 0 and a in self.avatars:
                         self.avatars.remove(a)
@@ -443,6 +449,16 @@ class MatrixGame:
 
                 # Colisiones de proyectiles
                 self.handle_projectile_collisions()
+
+                # ---- CONDICIÓN DE VICTORIA ----
+                if (
+                    not self.game_over
+                    and self.spawned_avatars >= self.MAX_AVATARS
+                    and len(self.avatars) == 0
+                ):
+                    self.game_over = True
+                    self.won = True
+                    self.continue_game = True   # 🟢 ganó → continuar
 
                 # UI (solo cuando el juego sigue)
                 self.draw_grid()
@@ -457,35 +473,49 @@ class MatrixGame:
                     (180, 180, 255),
                 )
 
-                # ---- TIMER EN FORMATO MM:SS ----
                 minutes = self.elapsed_time // 60
                 seconds = self.elapsed_time % 60
                 self.draw_text(f"Tiempo: {minutes:02d}:{seconds:02d}", (10, 200))
 
-            # ------------------ PANTALLA DE GAME OVER ------------------
             else:
+                base_y = self.WINDOW_H // 2
+
+                if self.won:
+                    msg = "¡Has ganado!"
+                    color = (60, 255, 60)
+                else:
+                    msg = "¡Has perdido!"
+                    color = (255, 60, 60)
+
+                # Mensaje principal
                 self.draw_text(
-                    "¡Has perdido!\nR: Reiniciar\nESC: Salir",
-                    (600, self.WINDOW_H // 2),
-                    (255, 60, 60),
+                    msg + "\nR: Reiniciar\nESC: Salir",
+                    (600, base_y),
+                    color,
                 )
 
+                # Tiempo final
                 minutes = self.elapsed_time // 60
                 seconds = self.elapsed_time % 60
-                self.draw_text(f"Tiempo: {minutes:02d}:{seconds:02d}", (600, self.WINDOW_H // 2 +80))
+                self.draw_text(
+                    f"Tiempo: {minutes:02d}:{seconds:02d}",
+                    (600, base_y + 80),
+                )
 
-                # Salir con ESC
+                # Botón único: salir a menú principal
+                self.draw_button(self.button_menu_rect, "Main Menu")
+
                 if pygame.key.get_pressed()[pygame.K_ESCAPE]:
                     self.running = False
 
             pygame.display.flip()
             self.clock.tick(60)
 
-        # Devolvemos el tiempo final congelado
-        return self.elapsed_time
+        # Devuelve si quiere continuar (según ganó/perdió) y el tiempo de la partida
+        return self.continue_game, self.elapsed_time
 
 
 if __name__ == "__main__":
-    game = MatrixGame()
+    game = MatrixGame(10)
     salida = game.run()
     print("Salida:", salida)
