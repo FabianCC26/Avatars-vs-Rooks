@@ -1,110 +1,110 @@
+import os
 import pygame
 from src.config import settings
 from src.utils.buttons import Button
 
+
 class InfoWindow:
-    def __init__(self, screen, background_surface, font):
+    def __init__(
+        self,
+        screen,
+        background_surface,
+        font,
+
+        # posiciones (x,y)
+        h2p_pos=(settings.WINDOW_WIDTH // 2, (settings.WINDOW_HEIGHT // 2)+170),
+        avatars_pos=(975, 170),
+        rook_pos=(325, 170),
+
+        # tamaños (w,h)
+        h2p_size=(720, 360),
+        avatars_size=(650, 325),
+        rook_size=(650, 325)
+    ):
         self.screen = screen
         self.background = background_surface
         self.font = font
         self.running = True
 
-        # Detectar tema
-        first_pixel = self.background.get_at((0, 0))
-        is_light = first_pixel.r > 150 and first_pixel.g > 150 and first_pixel.b > 150
+        # Rutas absolutas
+        base_path = os.path.dirname(os.path.dirname(__file__))  # /src
+        img_dir = os.path.join(base_path, "assets", "images")
 
-        if is_light:
-            self.button_bg = (217, 217, 217)
-            self.button_hover = (180, 180, 180)
-            self.text_color = (0, 0, 0)
-            self.panel_color = (240, 240, 240)
-        else:
-            self.button_bg = (115, 115, 115)
-            self.button_hover = (180, 180, 180)
-            self.text_color = (0, 0, 0)
-            self.panel_color = (200, 200, 200)
+        # Cargar imágenes con safe_load
+        self.img_h2p = self.safe_load(os.path.join(img_dir, "instrucciones.png"))
+        self.img_avatars = self.safe_load(os.path.join(img_dir, "inst_avatars.png"))
+        self.img_rook = self.safe_load(os.path.join(img_dir, "inst_rook.png"))
 
-        # Creamos el boton back
+        # Escalar imágenes si corresponde
+        if h2p_size:
+            self.img_h2p = pygame.transform.scale(self.img_h2p, h2p_size)
+
+        if avatars_size:
+            self.img_avatars = pygame.transform.scale(self.img_avatars, avatars_size)
+
+        if rook_size:
+            self.img_rook = pygame.transform.scale(self.img_rook, rook_size)
+
+        # Calcular posiciones
+        self.h2p_rect = self.img_h2p.get_rect(center=h2p_pos)
+        self.avatars_rect = self.img_avatars.get_rect(center=avatars_pos)
+        self.rook_rect = self.img_rook.get_rect(center=rook_pos)
+
+        # Botón Back
         self.back_button = Button(
-            pos=(settings.WINDOW_WIDTH // 2, settings.WINDOW_HEIGHT - 60),
-            size=(300, 80),
+            pos=((settings.WINDOW_WIDTH // 2)+575, (settings.WINDOW_HEIGHT - 70) + 30),
+            size=(100, 60),
             text="Back",
-            hover_color=self.button_hover,
-            bg_color=self.button_bg,
-            text_color=self.text_color,
+            hover_color=(180, 180, 180),
+            bg_color=(120, 120, 120),
+            text_color=(0, 0, 0),
             font=self.font
         )
 
-    def draw_text(self, text, x, y):
-        surface = self.font.render(text, True, self.text_color)
-        self.screen.blit(surface, (x, y))
+    # -------------------------------------------------------------------------
+    def safe_load(self, path):
+        """Carga imagen desde ruta absoluta; si falla devuelve dummy (para tests)."""
+        try:
+            return pygame.image.load(path)
+        except FileNotFoundError:
+            surf = pygame.Surface((400, 200))
+            surf.fill((150, 150, 150))
+            return surf
 
+    # -------------------------------------------------------------------------
     def draw(self):
         self.screen.blit(self.background, (0, 0))
 
-        # panel centrado
-        panel_width = 1200
-        panel_height = 520
-        panel_x = (settings.WINDOW_WIDTH - panel_width) // 2
-        panel_y = 20
+        # Dibujar las 3 imágenes
+        self.screen.blit(self.img_h2p, self.h2p_rect)
+        self.screen.blit(self.img_avatars, self.avatars_rect)
+        self.screen.blit(self.img_rook, self.rook_rect)
 
-        panel_surface = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
-        panel_surface.fill((*self.panel_color, 250))
-        self.screen.blit(panel_surface, (panel_x, panel_y))
-
-        # texto
-        x = panel_x + 20
-        y = panel_y + 20
-        line_space = 30
-
-        self.draw_text("Avatars VS Rooks is an educational video game designed to reinforce", x, y)
-        self.draw_text("programming concepts such as recursion, data structures", x, y + line_space)
-        self.draw_text("and iteration and disk storage.", x, y + line_space * 2)
-
-        y = y + line_space * 4
-        self.draw_text("Goal:", x, y)
-        self.draw_text("Place your Rooks, eliminate all the Avatars, and don't let them reach", x, y + line_space)
-        self.draw_text("the other side of the map.", x, y + line_space * 2)
-
-        y = y + line_space * 4
-        self.draw_text("Rooks", x, y)
-        self.draw_text("Arrowed: 2 attack points", x, y + line_space)
-        self.draw_text("Squire: 3 attack points", x, y + line_space * 2)
-        self.draw_text("Woodcutter: 9 attack points", x, y + line_space * 3)
-        self.draw_text("Cannibal: 12 attack points", x, y + line_space * 4)
-
-        y = y + line_space * 6
-        self.draw_text("How to play:", x, y)
-        self.draw_text("Earn coins, select your Rooks and place them to destroy the Avatars", x, y + line_space)
-
-        
-        back_width, back_height = 300, 80
-        back_center_x = settings.WINDOW_WIDTH // 2
-        back_center_y = panel_y + panel_height + 15 + back_height // 2
-
-        self.back_button.pos = (back_center_x, back_center_y)
-        
-        self.back_button.rect.center = self.back_button.pos
-
-        # dibujar boton back
+        # Botón
         self.back_button.draw(self.screen)
 
         pygame.display.flip()
 
+    # -------------------------------------------------------------------------
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
                 return "QUIT"
+
             if self.back_button.event_mouse(event):
                 return "BACK"
 
+    # -------------------------------------------------------------------------
     def run(self):
+        """Bucle principal: espera interacción y devuelve 'BACK' o 'QUIT'."""
         clock = pygame.time.Clock()
+
         while self.running:
             action = self.handle_events()
-            if action in ["BACK", "QUIT"]:
+
+            if action in ("BACK", "QUIT"):
                 return action
+
             self.draw()
             clock.tick(settings.FPS)
-        return None
