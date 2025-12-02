@@ -7,8 +7,9 @@ from src.utils.spotify_api_configuration import MusicAPI
 from src.utils.buttons_with_images import ButtonWithImage
 from src.config.settings import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI
 from src.ui.info_window import InfoWindow
-from src.utils.user_preferences import load_user_preferences, save_user_preferences  # ✅ Nuevo import
+from src.utils.user_preferences import load_user_preferences, save_user_preferences
 from src.gameplay.main_matrix import MatrixGame
+from DBconfig.firebase_config import db
 
 
 class MainWindow:
@@ -24,6 +25,14 @@ class MainWindow:
         self.tinted = (0, 0, 0)
         self.button_text_color = self.tinted
         self.actual_menu_layout = "Main menu"
+
+        # Datos de usuario
+        self.username = user
+        self.role = role
+
+        # Atributos relacionados con aprobaciones de admin
+        self.is_verified_admin = False
+        self.admin_approval_button = None
 
         # Backgrounds:
         dark_bg_path = os.path.join("src", "assets", "images", "dark_bg.png")
@@ -207,8 +216,7 @@ class MainWindow:
             redirect_uri=REDIRECT_URI
         )
 
-        # ✅ Preferencias del usuario
-        self.username = user
+        # Preferencias del usuario
         self.preferences = load_user_preferences(self.username)
 
         theme = self.preferences.get("theme", "light")
@@ -220,6 +228,26 @@ class MainWindow:
             self.turn_light()
 
         self.tint(color)
+
+        # Determinar si es administrador verificado y crear botón ADMIN si aplica
+        if self.role == "admin":
+            doc = db.collection("users").document(str(self.username).lower()).get()
+            if doc.exists:
+                data = doc.to_dict() or {}
+                self.is_verified_admin = bool(data.get("approved", False))
+
+        if self.is_verified_admin:
+            bg = self.button_light_bg if theme == "light" else self.button_dark_bg
+            hover = self.button_light_hoover if theme == "light" else self.button_dark_hoover
+            self.admin_approval_button = Button(
+                pos=(250, 470),
+                size=(150, 60),
+                text="ADMIN",
+                hover_color=hover,
+                bg_color=bg,
+                text_color=self.button_text_color,
+                font=self.font
+            )
 
     def put_music_api(self, song):
         self.api.play_song(song)
@@ -235,8 +263,8 @@ class MainWindow:
 
         self.play_button.bg_color = self.button_dark_bg
         self.play_button.hover_color = self.button_dark_hoover
-        self.continue_button.bg_color = self.button_dark_bg          # 🔹 continue style
-        self.continue_button.hover_color = self.button_dark_hoover   # 🔹 continue style
+        self.continue_button.bg_color = self.button_dark_bg
+        self.continue_button.hover_color = self.button_dark_hoover
 
         self.user_ranking_button.bg_color = self.button_dark_bg
         self.user_ranking_button.hover_color = self.button_dark_hoover
@@ -260,6 +288,11 @@ class MainWindow:
         self.user_info_canva.hover_color = self.button_dark_bg
         self.info_button.bg_color = self.button_dark_bg
         self.info_button.hover_color = self.button_dark_hoover
+
+        if self.admin_approval_button:
+            self.admin_approval_button.bg_color = self.button_dark_bg
+            self.admin_approval_button.hover_color = self.button_dark_hoover
+
         self.main_menu_draw()
 
         self.preferences["theme"] = "dark"
@@ -270,8 +303,8 @@ class MainWindow:
 
         self.play_button.bg_color = self.button_light_bg
         self.play_button.hover_color = self.button_light_hoover
-        self.continue_button.bg_color = self.button_light_bg         # 🔹 continue style
-        self.continue_button.hover_color = self.button_light_hoover  # 🔹 continue style
+        self.continue_button.bg_color = self.button_light_bg
+        self.continue_button.hover_color = self.button_light_hoover
 
         self.user_ranking_button.bg_color = self.button_light_bg
         self.user_ranking_button.hover_color = self.button_light_hoover
@@ -294,6 +327,11 @@ class MainWindow:
         self.user_info_canva.hover_color = self.button_light_bg
         self.info_button.bg_color = self.button_light_bg
         self.info_button.hover_color = self.button_light_hoover
+
+        if self.admin_approval_button:
+            self.admin_approval_button.bg_color = self.button_light_bg
+            self.admin_approval_button.hover_color = self.button_light_hoover
+
         self.main_menu_draw()
 
         self.preferences["theme"] = "light"
@@ -301,7 +339,7 @@ class MainWindow:
 
     def tint(self, color):
         self.play_button.text_color = color
-        self.continue_button.text_color = color          # 🔹 continue text color
+        self.continue_button.text_color = color
         self.user_ranking_button.text_color = color
         self.global_ranking_button.text_color = color
         self.configuration_button.fill = color
@@ -312,6 +350,10 @@ class MainWindow:
         self.pause_song_button.text_color = color
         self.resume_song_button.text_color = color
         self.info_button.text_color = color
+
+        if self.admin_approval_button:
+            self.admin_approval_button.text_color = color
+
         self.main_menu_draw()
 
         self.preferences["color"] = list(color)
@@ -366,6 +408,9 @@ class MainWindow:
             self.info_button.draw(self.screen)
             self.user_photo_canva.draw(self.screen)
 
+            if self.admin_approval_button and self.is_verified_admin:
+                self.admin_approval_button.draw(self.screen)
+
             # Mostrar botón CONTINUE si ya al menos pasaste el nivel 1
             if self.next_level > 1:
                 self.continue_button.draw(self.screen)
@@ -419,6 +464,7 @@ class MainWindow:
                         self.time_archive[0] = time
                         print(time)
 
+                # INFO
                 if self.info_button.event_mouse(event):
                     from src.ui.info_window import InfoWindow
                     theme_colors = {
@@ -432,6 +478,17 @@ class MainWindow:
                     if info_action == "QUIT":
                         self.running = False
                         return "QUIT"
+
+                # ADMIN approvals (solo admins verificados)
+                if self.admin_approval_button and self.is_verified_admin:
+                    if self.admin_approval_button.event_mouse(event):
+                        from src.ui.admin_approval_screen import AdminApprovalScreen
+                        approval_screen = AdminApprovalScreen(self.screen, self.username)
+                        result = approval_screen.run()
+                        self.main_menu_draw()
+                        if result == "QUIT":
+                            self.running = False
+                            return "QUIT"
 
             elif self.actual_menu_layout == "Configuration":
                 if self.music_input_box.handle_event(event):

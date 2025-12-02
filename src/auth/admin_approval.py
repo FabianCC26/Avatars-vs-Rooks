@@ -5,33 +5,34 @@
 
 import secrets
 from datetime import datetime, timezone
+from typing import Any, Dict, List
 from DBconfig.firebase_config import db
 from src.utils.email_service import send_email  # Se asume que existe una función send_email(to, subject, body)
 from google.cloud.firestore_v1 import DELETE_FIELD
 
 
-def _admin_email_list() -> list[str]:
+def _admin_email_list() -> List[str]:
     """
     Obtiene la lista de correos de administradores aprobados.
     """
-    emails = []
+    emails: List[str] = []
     admins = db.collection("users").where("role", "==", "admin").where("approved", "==", True).stream()
     for doc in admins:
-        data = doc.to_dict()
+        data = doc.to_dict() or {}
         email = data.get("email")
-        if email:
+        if isinstance(email, str) and email:
             emails.append(email)
     return emails
 
 
-def create_admin_approval_request(target_username: str, target_email: str, target_display: str, nationality: dict):
+def create_admin_approval_request(target_username: str, target_email: str, target_display: str, nationality: Dict[str, Any]):
     """
     Crea un documento de solicitud de aprobación en 'admin_approvals' y notifica a los administradores.
     """
     token = secrets.token_urlsafe(32)
     req_ref = db.collection("admin_approvals").document(token)
 
-    payload = {
+    payload: Dict[str, Any] = {
         "token": token,
         "target_username": target_username,
         "target_email": target_email,
@@ -66,7 +67,8 @@ def create_admin_approval_request(target_username: str, target_email: str, targe
         try:
             send_email(to, subject, body)
         except Exception:
-            pass  # Evitar que un fallo de envío interrumpa el flujo
+            # Evitar que un fallo de envío interrumpa el flujo
+            pass
 
 
 def approve_admin_by_token(token: str, approver_username: str) -> tuple[bool, str]:
@@ -77,7 +79,8 @@ def approve_admin_by_token(token: str, approver_username: str) -> tuple[bool, st
     approver_doc = db.collection("users").document(approver_username.lower()).get()
     if not approver_doc.exists:
         return False, "Aprobador no existe."
-    approver = approver_doc.to_dict()
+
+    approver = approver_doc.to_dict() or {}
     if approver.get("role") != "admin" or not approver.get("approved", False):
         return False, "Solo un administrador aprobado puede aprobar solicitudes."
 
@@ -85,11 +88,14 @@ def approve_admin_by_token(token: str, approver_username: str) -> tuple[bool, st
     if not req_doc.exists:
         return False, "Token inválido o inexistente."
 
-    req = req_doc.to_dict()
+    req = req_doc.to_dict() or {}
     if req.get("status") != "pending":
         return False, "Esta solicitud ya fue procesada."
 
-    target_username = req["target_username"]
+    target_username = req.get("target_username")
+    if not isinstance(target_username, str) or not target_username:
+        return False, "Datos de la solicitud incompletos."
+
     user_ref = db.collection("users").document(target_username)
     user_doc = user_ref.get()
     if not user_doc.exists:
@@ -113,13 +119,15 @@ def approve_admin_by_token(token: str, approver_username: str) -> tuple[bool, st
 
     # Avisar al usuario objetivo por correo
     try:
-        subject = "Avatars vs Rooks: solicitud de administrador aprobada"
-        body = (
-            f"Hola {target_username},\n\n"
-            f"Tu solicitud para acceder como administrador ha sido aprobada por {approver_username}.\n"
-            f"Ya puedes iniciar sesión con privilegios de administrador."
-        )
-        send_email(req["target_email"], subject, body)
+        target_email = req.get("target_email", "")
+        if isinstance(target_email, str) and target_email:
+            subject = "Avatars vs Rooks: solicitud de administrador aprobada"
+            body = (
+                f"Hola {target_username},\n\n"
+                f"Tu solicitud para acceder como administrador ha sido aprobada por {approver_username}.\n"
+                f"Ya puedes iniciar sesión con privilegios de administrador."
+            )
+            send_email(target_email, subject, body)
     except Exception:
         pass
 
@@ -133,7 +141,8 @@ def reject_admin_by_token(token: str, approver_username: str) -> tuple[bool, str
     approver_doc = db.collection("users").document(approver_username.lower()).get()
     if not approver_doc.exists:
         return False, "Aprobador no existe."
-    approver = approver_doc.to_dict()
+
+    approver = approver_doc.to_dict() or {}
     if approver.get("role") != "admin" or not approver.get("approved", False):
         return False, "Solo un administrador aprobado puede rechazar solicitudes."
 
@@ -141,7 +150,7 @@ def reject_admin_by_token(token: str, approver_username: str) -> tuple[bool, str
     if not req_doc.exists:
         return False, "Token inválido o inexistente."
 
-    req = req_doc.to_dict()
+    req = req_doc.to_dict() or {}
     if req.get("status") != "pending":
         return False, "Esta solicitud ya fue procesada."
 
@@ -154,12 +163,15 @@ def reject_admin_by_token(token: str, approver_username: str) -> tuple[bool, str
 
     # Notificar al usuario objetivo
     try:
-        subject = "Avatars vs Rooks: solicitud de administrador rechazada"
-        body = (
-            f"Hola {req['target_username']},\n\n"
-            f"Tu solicitud para acceder como administrador fue rechazada por {approver_username}."
-        )
-        send_email(req["target_email"], subject, body)
+        target_username = req.get("target_username", "")
+        target_email = req.get("target_email", "")
+        if isinstance(target_email, str) and target_email:
+            subject = "Avatars vs Rooks: solicitud de administrador rechazada"
+            body = (
+                f"Hola {target_username},\n\n"
+                f"Tu solicitud para acceder como administrador fue rechazada por {approver_username}."
+            )
+            send_email(target_email, subject, body)
     except Exception:
         pass
 

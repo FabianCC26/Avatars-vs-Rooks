@@ -91,8 +91,12 @@ class InputBox:
             if not raw:
                 return ""
             if isinstance(raw, bytes):
-                return raw.decode("utf-8", errors="ignore")
-            return str(raw)
+                text = raw.decode("utf-8", errors="ignore")
+            else:
+                text = str(raw)
+            # Limpiar caracteres problemáticos (incluye '\x00' y no imprimibles)
+            cleaned = "".join(ch for ch in text if ch.isprintable())
+            return cleaned
         except Exception:
             return ""
 
@@ -113,7 +117,7 @@ class InputBox:
         x = mouse_x - area_x + self.scroll_x
         if x <= 0:
             return 0
-        # Búsqueda lineal (texto corto). Si el input es largo, esto sigue siendo suficientemente rápido.
+        # Búsqueda lineal (texto corto)
         acc = 0
         for i, ch in enumerate(display_text):
             w = self._text_width(ch)
@@ -212,7 +216,6 @@ class InputBox:
             ctrl = (mods & pygame.KMOD_CTRL) != 0
             shift = (mods & pygame.KMOD_SHIFT) != 0
 
-            # Enter no hace nada aquí (el contenedor decide), pero se puede imprimir si se desea
             if event.key == pygame.K_RETURN:
                 pass
 
@@ -239,13 +242,19 @@ class InputBox:
             elif ctrl and event.key == pygame.K_v:
                 paste = self._clip_get()
                 if paste:
+                    # Normalizar saltos de línea
+                    paste = paste.replace("\n", " ").replace("\r", " ")
+                    # Filtrar no imprimibles por seguridad extra
+                    paste = "".join(ch for ch in paste if ch.isprintable())
+
                     # Limitar para no exceder max_chars
-                    available = self.max_chars - len(self.text) + (self.sel_end - self.sel_start if self._has_selection() else 0)
+                    available = self.max_chars - len(self.text) + (
+                        self.sel_end - self.sel_start if self._has_selection() else 0
+                    )
                     if available <= 0:
                         return
                     if self._has_selection():
                         self._delete_selection()
-                    paste = paste.replace("\n", " ").replace("\r", " ")
                     paste = paste[:available]
                     self.text = self.text[:self.caret_pos] + paste + self.text[self.caret_pos:]
                     self.caret_pos += len(paste)
@@ -386,8 +395,7 @@ class InputBox:
         text_pixel_len = self._text_width(display_for_width)
         self.scroll_x = max(0, min(self.scroll_x, max(0, text_pixel_len - visible_width)))
 
-        # Calcular inicio y fin visibles en píxeles
-        # Render simple: blitear el texto completo con offset negativo por scroll_x
+        # Render del texto con scroll horizontal
         text_surface = self.font.render(raw_display, True, color_text)
         text_y = self.rect.y + (self.rect.height - text_surface.get_height()) // 2
         screen.blit(text_surface, (area_left - self.scroll_x, text_y))
@@ -400,13 +408,11 @@ class InputBox:
             sel_x = area_left + max(0, left_px)
             sel_w = max(0, right_px - left_px)
             sel_rect = pygame.Rect(sel_x, text_y, sel_w, text_surface.get_height())
-            # Capa de selección semitransparente
-            sel_color = (30, 144, 255, 100)  # dodgerblue con alpha
+            sel_color = (30, 144, 255, 100)
             sel_surf = pygame.Surface((sel_rect.width, sel_rect.height), pygame.SRCALPHA)
             sel_surf.fill(sel_color)
             screen.blit(sel_surf, (sel_rect.x, sel_rect.y))
 
-            # Redibujar texto de la selección en blanco encima para contraste
             selected_str = raw_display[self.sel_start:self.sel_end]
             before_px = self._text_width(raw_display[:self.sel_start])
             sel_text_surf = self.font.render(selected_str, True, (255, 255, 255))
