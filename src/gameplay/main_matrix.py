@@ -64,7 +64,9 @@ class MatrixGame:
         self.avatars = []
         self.projectiles = []
         self.last_spawn = time.time()
-        self.rook_selected = "arena"
+        #self.rook_selected = "arena"
+        self.rook_types = ["arena", "roca", "fuego", "agua"]
+        self.rook_selected = self.rook_types[0]  # "arena"
         self.running = True
         self.game_over = False
 
@@ -262,6 +264,23 @@ class MatrixGame:
             self.rooks.append(Rook(gx, gy, self.rook_selected))
             self.coins -= cost
 
+    def cycle_rook(self, direction=1):
+        """
+        Cambia self.rook_selected al siguiente tipo de rook en la lista.
+        direction = 1  -> siguiente
+        direction = -1 -> anterior (por si luego quieres ciclar hacia atrás)
+        """
+        if not hasattr(self, "rook_types") or not self.rook_types:
+            return
+
+        try:
+            idx = self.rook_types.index(self.rook_selected)
+        except ValueError:
+            idx = 0
+
+        new_idx = (idx + direction) % len(self.rook_types)
+        self.rook_selected = self.rook_types[new_idx]
+
     def handle_events(self):
         for evt in pygame.event.get():
             if evt.type == pygame.QUIT:
@@ -282,6 +301,8 @@ class MatrixGame:
                     self.rook_selected = "agua"
                 elif evt.key == pygame.K_r:
                     self.reset_game()
+                elif evt.key == pygame.K_c:
+                    self.cycle_rook(direction=1)
 
                 # --- Navegacion del cursor con flechas ---
                 elif evt.key == pygame.K_LEFT:
@@ -311,21 +332,19 @@ class MatrixGame:
         if not hasattr(self, "joystick") or self.joystick is None:
             return
 
-        direction, button = self.joystick.read_state()
+        direction, button, rook_next = self.joystick.read_state()
         now = time.time()
 
         # ---------- MOVIMIENTO DEL CURSOR CON RATE LIMIT ----------
         if direction == "CENTER":
-            # Si suelta el joystick, "reseteamos" la última dirección
             self.last_joy_dir = "CENTER"
         else:
-            # Decidimos si toca movernos en esta iteración
             should_move = False
 
-            # 1) Si cambió la dirección (ej: de LEFT a UP), movemos inmediatamente
+            # 1) Si cambió la dirección (ej: de LEFT a UP), se mueve inmediatamente
             if direction != self.last_joy_dir:
                 should_move = True
-            # 2) Si es la misma dirección, solo movemos si ya pasó el intervalo
+            # 2) Si es la misma dirección, solo mueve si ya pasó el intervalo
             elif now - self.last_joy_move_time >= self.JOY_MOVE_INTERVAL:
                 should_move = True
 
@@ -343,7 +362,7 @@ class MatrixGame:
                     if self.cursor_row < self.FILAS - 1:
                         self.cursor_row += 1
 
-                # Guardamos cuándo nos movimos y en qué dirección
+                # Guarda cuando se movio y en que dirección
                 self.last_joy_move_time = now
                 self.last_joy_dir = direction
 
@@ -351,7 +370,9 @@ class MatrixGame:
         # BTN:0 = PRESIONADO, BTN:1 = SUELTO
         if button == 0 and self.last_joy_button == 1 and not self.game_over:
             self.handle_cell_action(self.cursor_col, self.cursor_row)
-
+        
+        if rook_next:
+            self.cycle_rook(direction=1)
         self.last_joy_button = button
     
 

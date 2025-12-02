@@ -32,15 +32,20 @@ class JoystickReader:
         """
 
         if self.ser is None:
-            return self.last_direction, self.last_button
+            return self.last_direction, self.last_button, False
 
         try:
 
             line = self.ser.readline().decode('utf-8').strip()
  
             if not line:
-                return self.last_direction, self.last_button
+                return self.last_direction, self.last_button, False
 
+            # Caso especial: botón de rook
+            if line == "ROOK:NEXT":
+                # No cambiamos dirección ni botón, solo avisamos del evento
+                return self.last_direction, self.last_button, True
+            
             partes = line.split()
             data = {}
 
@@ -63,9 +68,9 @@ class JoystickReader:
             self.last_direction = direction
             self.last_button = button
 
-            return direction, button
+            return direction, button, False
 
         except Exception as e:
             # Si algo sale mal
             # devuelve el ultimo
-            return self.last_direction, self.last_button
+            return self.last_direction, self.last_button, False
