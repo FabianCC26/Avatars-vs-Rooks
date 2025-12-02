@@ -22,7 +22,8 @@ class Rook:
         self.daño = stats["daño"]
         self.rango = stats["rango"]
         self.velocidad_ataque = stats["velocidad_ataque"]
-        self.color = stats["color"]
+        self.image = stats["image"]
+        self.color = stats["color"] 
         self.cost = stats["cost"]
 
         self.last_attack_time = 0.0
@@ -65,4 +66,6 @@ class Rook:
             self.last_attack_time = now
 
     def draw(self, screen):
-        pygame.draw.rect(screen, self.color, self.rect, border_radius=8)
+        screen.blit(self.image, self.rect)
+
+

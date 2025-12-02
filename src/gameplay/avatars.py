@@ -25,6 +25,7 @@ class Avatar:
         self.attack_interval = stats["attack_interval"]
         self.rango = stats["rango"]          # rango en píxeles
         self.color = stats["color"]
+        self.image = stats["image"]
 
         self.size = 50
         self.rect = pygame.Rect(
@@ -104,4 +105,5 @@ class Avatar:
             body_color = self.color
 
         
-        pygame.draw.rect(screen, body_color, self.rect, border_radius=6)
+        screen.blit(config.AVATAR_STATS[self.tipo]["image"], self.rect)
+
