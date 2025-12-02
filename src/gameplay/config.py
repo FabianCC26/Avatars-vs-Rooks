@@ -8,15 +8,12 @@ def load_img(path, size=None):
     full = os.path.join(ASSETS_DIR, path)
     print("Buscando imagen:", full)
 
-    img = pygame.image.load(full)   # SIN convert ni convert_alpha
+    img = pygame.image.load(full)
 
     if size is not None:
         img = pygame.transform.smoothscale(img, size)
 
     return img
-
-
-
 
 # ----------------- GRID / VENTANA -----------------
 GRID_ROWS = 9
