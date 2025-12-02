@@ -516,6 +516,6 @@ class MatrixGame:
 
 
 if __name__ == "__main__":
-    game = MatrixGame(10)
+    game = MatrixGame(5)
     salida = game.run()
     print("Salida:", salida)
