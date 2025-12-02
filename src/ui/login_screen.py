@@ -7,6 +7,7 @@ from src.auth.login_user import login_por_username
 from src.ui.main_window import MainWindow
 from DBconfig.firebase_config import db
 from src.auth.password_recovery import enviar_password_recovery
+from src.auth.google_oauth import login_with_google   # Integración Google OAuth
 
 
 class LoginScreen:
@@ -31,9 +32,20 @@ class LoginScreen:
             size=(200, 40),
             text="Forgot Password?",
             bg_color=(180, 180, 180),
-            font=self.xsmall_font  # Fuente más pequeña definida en settings
+            font=self.xsmall_font
         )
         self.quit_button = Button(pos=(100, 50), size=(150, 40), text="Quit", bg_color=(180, 180, 180))
+
+        # Botón de Google Login
+        self.google_button = Button(
+            pos=(settings.WINDOW_WIDTH - 160, settings.WINDOW_HEIGHT - 80),
+            size=(140, 50),
+            text="Google",
+            bg_color=(255, 255, 255),
+            hover_color=(230, 230, 230),
+            text_color=(40, 40, 40),
+            font=self.small_font
+        )
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -46,6 +58,8 @@ class LoginScreen:
 
             if self.login_button.event_mouse(event):
                 self.login_user()
+            elif self.google_button.event_mouse(event):
+                self.google_login()
             elif self.register_button.event_mouse(event):
                 return "REGISTER"
             elif self.forgot_button.event_mouse(event):
@@ -65,6 +79,7 @@ class LoginScreen:
 
         usuarios_ref = db.collection("users")
         query = usuarios_ref.where("username", "==", username).stream()
+
         usuario_encontrado = None
         datos_usuario = None
 
@@ -121,6 +136,57 @@ class LoginScreen:
             self.message = "Invalid username or password."
             self.message_color = (255, 0, 0)
 
+    # Login usando Google OAuth
+    def google_login(self):
+        self.message = "Opening Google login..."
+        self.message_color = (0, 120, 200)
+        pygame.display.flip()
+
+        user_info = login_with_google()
+        if not user_info:
+            self.message = "Google login failed."
+            self.message_color = (255, 0, 0)
+            return
+
+        email = user_info["email"]
+        name = user_info["name"]
+        google_id = user_info["google_id"]
+        picture = user_info["picture"]
+
+        # Buscar usuario existente por email
+        query = db.collection("users").where("email", "==", email).stream()
+
+        existing_doc = None
+        for doc in query:
+            existing_doc = doc
+            break
+
+        if existing_doc:
+            user_data = existing_doc.to_dict()
+            username = user_data["username"]
+            role = user_data.get("role", "player")
+        else:
+            # Crear nuevo usuario basado en Google OAuth
+            username = email.split("@")[0]
+
+            db.collection("users").document(username).set({
+                "username": username,
+                "email": email,
+                "name": name,
+                "lastname": "",
+                "uid": google_id,
+                "role": "player",
+                "approved": True,
+                "photo_url": picture,
+                "created_at": "google_oauth"
+            })
+            role = "player"
+
+        # Abrir ventana principal
+        main_window = MainWindow(role, username, picture)
+        main_window.run()
+        self.running = False
+
     def draw(self):
         self.screen.fill(settings.COLOR_BACKGROUND)
 
@@ -135,6 +201,7 @@ class LoginScreen:
 
         # Botones
         self.login_button.draw(self.screen)
+        self.google_button.draw(self.screen)
         self.register_button.draw(self.screen)
         self.forgot_button.draw(self.screen)
         self.quit_button.draw(self.screen)
@@ -159,5 +226,6 @@ class LoginScreen:
             action = self.handle_events()
             if action in ["QUIT", "REGISTER"]:
                 return action
+
             self.draw()
             clock.tick(settings.FPS)
