@@ -11,13 +11,17 @@ btn = Pin(16, Pin.IN, Pin.PULL_UP)   # Boton joystick
 led = Pin(15, Pin.OUT)               # LED en GP15 (joystick)
 
 boton_guardado = Pin(14, Pin.IN, Pin.PULL_UP)  # Boton de guardado
-led_guardado = Pin(13, Pin.OUT)       # LED en GP17 (guardado)
+led_guardado = Pin(13, Pin.OUT)                # LED en GP13 (guardado)
+
+boton_rook = Pin(12,Pin.IN,Pin.PULL_UP)   # btn en GP12 
 
 CENTER = 32768
 DEADZONE = 5000
 
 ultima_direccion = None
 ultimo_boton = 1  # 1 = suelto 0 = presionado
+
+ultimo_boton_rook = 1
 
 guardado_activo_hasta = 0          # tiempo (en ms) hasta el que debe estar encendido
 ultimo_boton_guardado = 1          # para detectar flanco de 1 -> 0
@@ -53,6 +57,17 @@ while True:
         led.value(0)  # encender 
     else:
         led.value(1)  # apagar
+    
+    # lectura del boton (GP12)
+    estado_rook = boton_rook.value()  # 1 = suelto, 0 = presionado
+
+    # Detectar flanco de 1 -> 0 (pulsacion)
+    if estado_rook == 0 and ultimo_boton_rook == 1:
+        # Enviar evento de cambio de rook
+        print("ROOK:NEXT")
+        uart1.write("ROOK:NEXT")
+
+    ultimo_boton_rook = estado_rook
 
     # --- lectura del botón de guardado ---
     estado_guardado = boton_guardado.value()  # 1 = suelto, 0 = presionado
@@ -72,8 +87,10 @@ while True:
 
     if direccion != ultima_direccion or boton_joystick != ultimo_boton:
         # Formato: "DIR:UP BTN:0"
+        msg = f"DIR:{direccion} BTN:{1 if boton_joystick else 0}"
         print(f"DIR:{direccion} BTN:{1 if boton_joystick else 0}")
-        uart1.write(f"DIR:{direccion} BTN:{1 if boton_joystick else 0}")
+        #uart1.write(f"DIR:{direccion} BTN:{1 if boton_joystick else 0}")
+        uart1.write(msg)
         ultima_direccion = direccion
         ultimo_boton = boton_joystick
 
