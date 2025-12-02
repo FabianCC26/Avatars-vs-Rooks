@@ -1,114 +1,147 @@
-# ============================
-# CONFIGURACIÓN GENERAL DEL JUEGO
-# ============================
+import pygame 
+import os
 
-#ANCHO = 900
-#ALTO = 600
+# ----------------- RUTAS -----------------
+ASSETS_DIR = os.path.join("src", "assets")
 
-# Dimensiones de la ventana
-WINDOW_WIDTH = 1000
-WINDOW_HEIGHT = 600
+def load_img(path, size=None):
+    full = os.path.join(ASSETS_DIR, path)
+    print("Buscando imagen:", full)
 
-# Tamaño de cada celda de la cuadrícula
-CELL_SIZE = 100
-CELL_W = 60
-CELL_H = 60
+    img = pygame.image.load(full)
 
-# Dimensiones de la matriz
-GRID_COLS = 9
-GRID_ROWS = 6
+    if size is not None:
+        img = pygame.transform.smoothscale(img, size)
 
-# Color del fondo
-BACKGROUND_COLOR = (230, 230, 230)
-GRID_COLOR = (200, 200, 200)
-LEFT_ZONE_COLOR = (180, 220, 180)  # color diferente para la primera columna
-TEXT_COLOR = (0,0,0)
+    return img
 
-# Monedas iniciales
-INITIAL_COINS = 150
+# ----------------- GRID / VENTANA -----------------
+GRID_ROWS = 9
+GRID_COLS = 5
 
-# Tiempo entre aparición de avatares (en segundos)
-SPAWN_INTERVAL = 10
+CELL_SIZE = 70  # solo por referencia
+WINDOW_WIDTH = GRID_COLS * CELL_SIZE
+WINDOW_HEIGHT = GRID_ROWS * CELL_SIZE
 
-# Recompensa por eliminar un avatar
-COINS_PER_KILL = 75
+# ----------------- COLORES -----------------
+BACKGROUND_COLOR = (20, 20, 20)
+GRID_COLOR = (80, 80, 80)
+TEXT_COLOR = (255, 255, 255)
 
-# ============================
-# STATS DE LOS ROOKS (DEFENSORES)
-# ============================
+# ----------------- ECONOMÍA -----------------
+INITIAL_COINS = 100
+COINS_PER_KILL = 75   # de la tabla: 75 monedas por avatar eliminado
 
-ROOK_ATACK_INTERVAL = 10
+# ----------------- SPAWN -----------------
+SPAWN_INTERVAL = 3.0  # segundos entre spawns
 
+# ----------------- PROYECTILES -----------------
+PROJECTILE_SPEED = 8
+
+# ----------------- ROOKS (torres) ----------------------
+# De la tabla:
+# Sand:   Attack 2, Cost 50,  Resistance 3
+# Rock:   Attack 4, Cost 100, Resistance 14
+# Fire:   Attack 8, Cost 150, Resistance 16
+# Water:  Attack 8, Cost 150, Resistance 16
+
+ROOK_IMAGE_SIZE = (60, 60)
 ROOK_STATS = {
     "arena": {
-        "vida": 100,
-        "daño": 15,
-        "rango": 1,
-        "velocidad_ataque": 1.0,
+        "vida": 3,                   # Resistance
+        "daño": 1,                   # Attack
+        "rango": 200,
+        "velocidad_ataque": 4.0,     # puedes ajustar luego si quieres otro ritmo
+        "image": load_img("images/rooks/arena.png", ROOK_IMAGE_SIZE),
+        "color": (199, 178, 117),    # Color del proyectil
         "cost": 50,
-        "color": (194, 178, 128)
     },
     "roca": {
-        "vida": 200,
-        "daño": 25,
-        "rango": 1,
-        "velocidad_ataque": 1.2,
+        "vida": 14,
+        "daño": 2,
+        "rango": 200,
+        "velocidad_ataque": 4.0,
+        "image": load_img("images/rooks/roca.png", ROOK_IMAGE_SIZE),
+        "color": (120, 120, 120),
         "cost": 100,
-        "color": (120, 120, 120)
     },
     "fuego": {
-        "vida": 80,
-        "daño": 40,
-        "rango": 3,
-        "velocidad_ataque": 0.6,
+        "vida": 16,
+        "daño": 4,
+        "rango": 200,
+        "velocidad_ataque": 4.0,
+        "image": load_img("images/rooks/fuego.png", ROOK_IMAGE_SIZE),
+        "color": (255, 80, 20),
         "cost": 150,
-        "color": (255, 80, 0)
     },
     "agua": {
-        "vida": 100,
-        "daño": 20,
-        "rango": 2,
-        "velocidad_ataque": 0.8,
+        "vida": 14,
+        "daño": 6,
+        "rango": 200,
+        "velocidad_ataque": 4.0,
+        "image": load_img("images/rooks/agua.png", ROOK_IMAGE_SIZE),
+        "color": (80, 160, 255),
         "cost": 150,
-        "color": (0, 120, 255)
-    }
+    },
 }
 
-# ============================
-# STATS DE LOS AVATARES (ENEMIGOS)
-# ============================
+# ----------------- AVATARS (Enemigos) -----------------
+# Tabla:
+# Archer     -> Power Attack 2,  Resistance 5,  Speed 12, DPS 10
+# Squire     -> Power Attack 3,  Resistance 10, Speed 10, DPS 15
+# Lummberjack-> Power Attack 9,  Resistance 20, Speed 13, DPS 5
+# Canibbal   -> Power Attack 12, Resistance 25, Speed 14, DPS 3
+#
+# Mapeo:
+#   vida   = Resistance
+#   daño   = Power Attack
+#   velocidad ~ 0.05 * Speed  (mantiene magnitud parecida a la que ya usabas)
+#   attack_interval = daño / DPS
 
+AVATAR_IMAGE_SIZE = (65, 65)
 AVATAR_STATS = {
-    "Avatar_Flechador": {
-        "vida": 5,                 # Resistencia (puntos)
-        "velocidad": 12,           # Velocidad de avance (cada X seg)
-        "daño": 2,                 # Poder de ataque
-        "frecuencia_ataque": 10,   # Cada X seg
-        "tipo": "rango",
-        "color": (194, 178, 128)
+    "flechador": {  # Archer
+        "vida": 2,
+        "daño": 0.5,
+        "velocidad": 0.05 * 12,     # Speed 12
+        "attack_interval": 2 ,  # DPS 10
+        "color": (200, 220, 255),
+        "image": load_img("images/avatars/arquero.png", AVATAR_IMAGE_SIZE),
+        "rango": 200,
     },
-    "Avatar_Escudero": {
-        "vida": 10,
-        "velocidad": 10,
-        "daño": 3,
-        "frecuencia_ataque": 15,
-        "tipo": "melee",
-        "color": (100, 100, 100)
+    "escudero": {   # Squire
+        "vida": 6,
+        "daño": 0.7,
+        "velocidad": 0.05 * 10,     # Speed 10
+        "attack_interval": 3,  # DPS 15
+        "image": load_img("images/avatars/escudero.png", AVATAR_IMAGE_SIZE),
+        "color": (180, 200, 255),
+        "rango": 200,
     },
-    "Avatar_Leñador": {
-        "vida": 20,
-        "velocidad": 13,
-        "daño": 9,
-        "frecuencia_ataque": 5,  # si hay torre enfrente
-        "tipo": "melee",
-        "color": (255, 80, 0)
+    "lenador": {    # Lumberjack
+        "vida": 3,
+        "daño": 1,
+        "velocidad": 0.05 * 13,     # Speed 13
+        "attack_interval": 4,   # DPS 5
+        "image": load_img("images/avatars/leñador.png", AVATAR_IMAGE_SIZE),
+        "color": (150, 255, 150),
+        "rango": 200,
     },
-    "Avatar_Canibal": {
-        "vida": 25,
-        "velocidad": 14,
-        "daño": 12,
-        "frecuencia_ataque": 3,  # si hay torre enfrente
-        "tipo": "melee",
-        "color": (0, 120, 255)
-    }
+    "canibal": {    # Cannibal
+        "vida": 2,
+        "daño": 1.2,
+        "velocidad": 0.05 * 14,     # Speed 14
+        "attack_interval": 6,  # DPS 3
+        "image": load_img("images/avatars/canibal.png", AVATAR_IMAGE_SIZE),
+        "color": (255, 150, 150),
+        "rango": 200,
+    },
+}
+
+# ----------------- PROBABILIDADES DE SPAWN -----------------
+AVATAR_SPAWN_WEIGHTS = {
+    "flechador": 0.40,
+    "escudero": 0.30,
+    "lenador":  0.20,
+    "canibal":  0.15,
 }
