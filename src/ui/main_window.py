@@ -10,12 +10,15 @@ from src.ui.info_window import InfoWindow
 from src.utils.user_preferences import load_user_preferences, save_user_preferences  # ✅ Nuevo import
 from src.gameplay.main_matrix import MatrixGame
 
+
 class MainWindow:
 
     def __init__(self, role, user, photo):
 
         self.screen = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
         self.running = True
+        self.next_level = 1
+        self.time_archive = [0, 0, 0]   # [nivel1, nivel2, nivel3]
         pygame.display.set_caption("Main Window")
 
         self.tinted = (0, 0, 0)
@@ -51,10 +54,21 @@ class MainWindow:
         self.config_button_actual_image = self.image_light_path
 
         # Main Menu Buttons:
+
+        self.continue_button = Button(
+            pos=(640, 250),
+            size=(300, 80),
+            text="CONTINUE",
+            hover_color=self.button_light_hoover,
+            bg_color=self.button_light_bg,
+            text_color=self.button_text_color,
+            font=self.font
+        )
+
         self.play_button = Button(
             pos=(640, 350),
             size=(300, 80),
-            text="PLAY",
+            text="NEW GAME",
             hover_color=self.button_light_hoover,
             bg_color=self.button_light_bg,
             text_color=self.button_text_color,
@@ -218,12 +232,17 @@ class MainWindow:
 
     def turn_dark(self):
         self.actual_bg = self.dark_bg
+
         self.play_button.bg_color = self.button_dark_bg
         self.play_button.hover_color = self.button_dark_hoover
+        self.continue_button.bg_color = self.button_dark_bg          # 🔹 continue style
+        self.continue_button.hover_color = self.button_dark_hoover   # 🔹 continue style
+
         self.user_ranking_button.bg_color = self.button_dark_bg
         self.user_ranking_button.hover_color = self.button_dark_hoover
         self.global_ranking_button.bg_color = self.button_dark_bg
         self.global_ranking_button.hover_color = self.button_dark_hoover
+
         self.configuration_button.set_image(self.image_dark_path)
         self.light_theme_button.bg_color = self.button_dark_bg
         self.light_theme_button.hover_color = self.button_dark_hoover
@@ -248,8 +267,12 @@ class MainWindow:
 
     def turn_light(self):
         self.actual_bg = self.light_bg
+
         self.play_button.bg_color = self.button_light_bg
         self.play_button.hover_color = self.button_light_hoover
+        self.continue_button.bg_color = self.button_light_bg         # 🔹 continue style
+        self.continue_button.hover_color = self.button_light_hoover  # 🔹 continue style
+
         self.user_ranking_button.bg_color = self.button_light_bg
         self.user_ranking_button.hover_color = self.button_light_hoover
         self.global_ranking_button.bg_color = self.button_light_bg
@@ -273,12 +296,12 @@ class MainWindow:
         self.info_button.hover_color = self.button_light_hoover
         self.main_menu_draw()
 
-       
         self.preferences["theme"] = "light"
         save_user_preferences(self.username, self.preferences)
 
     def tint(self, color):
         self.play_button.text_color = color
+        self.continue_button.text_color = color          # 🔹 continue text color
         self.user_ranking_button.text_color = color
         self.global_ranking_button.text_color = color
         self.configuration_button.fill = color
@@ -291,9 +314,32 @@ class MainWindow:
         self.info_button.text_color = color
         self.main_menu_draw()
 
-    
         self.preferences["color"] = list(color)
         save_user_preferences(self.username, self.preferences)
+
+    def _format_time(self, t):
+        minutes = t // 60
+        seconds = t % 60
+        return f"{minutes:02d}:{seconds:02d}"
+
+    def _draw_times_list(self):
+        """
+        Dibuja los tiempos de los 3 niveles en la parte derecha,
+        solo se usa cuando ya se terminó el nivel 3.
+        """
+        base_x = 980   # un poco a la derecha de los botones
+        base_y = 220
+
+        title_surf = self.font.render("LEVEL TIMES", True, self.play_button.text_color)
+        self.screen.blit(title_surf, (base_x, base_y))
+
+        labels = ["Level 1", "Level 2", "Level 3"]
+        for i, label in enumerate(labels):
+            t = self.time_archive[i]
+            time_str = self._format_time(t)
+            text = f"{label}: {time_str}"
+            surf = self.font.render(text, True, self.play_button.text_color)
+            self.screen.blit(surf, (base_x, base_y + 40 * (i + 1)))
 
     def main_menu_draw(self):
         self.screen.blit(self.actual_bg, (0, 0))
@@ -310,6 +356,7 @@ class MainWindow:
             self.search_song_button.draw(self.screen)
             self.music_input_box.draw(self.screen)
             self.pause_song_button.draw(self.screen)
+
         else:
             self.user_info_canva.draw(self.screen)
             self.play_button.draw(self.screen)
@@ -318,6 +365,15 @@ class MainWindow:
             self.configuration_button.draw(self.screen)
             self.info_button.draw(self.screen)
             self.user_photo_canva.draw(self.screen)
+
+            # Mostrar botón CONTINUE si ya al menos pasaste el nivel 1
+            if self.next_level > 1:
+                self.continue_button.draw(self.screen)
+
+            # Mostrar lista de tiempos cuando ya se terminó el nivel 3
+            if self.time_archive[2] > 0:
+                self._draw_times_list()
+
         pygame.display.flip()
 
     def handle_events(self):
@@ -330,11 +386,39 @@ class MainWindow:
                 if self.configuration_button.event_mouse(event):
                     self.actual_menu_layout = "Configuration"
 
+                # CONTINUE
+                if self.next_level > 1 and self.continue_button.event_mouse(event):
+                    nivel_actual = self.next_level  # capturamos antes
 
+                    if nivel_actual == 2:
+                        game = MatrixGame(13)
+                        self.can_continue, time = game.run()
+                        if self.can_continue:
+                            self.next_level = 3
+                            self.time_archive[1] = time
+
+                    elif nivel_actual == 3:
+                        game = MatrixGame(17)
+                        self.can_continue, time = game.run()
+                        if self.can_continue:
+                            # terminó nivel 3
+                            self.next_level = 1
+                            self.time_archive[2] = time
+                            print(self.time_archive)
+
+                # NEW GAME
                 if self.play_button.event_mouse(event):
-                    game = MatrixGame()
-                    game.run()
-                
+                    # resetear progreso y tiempos
+                    self.next_level = 1
+                    self.time_archive = [0, 0, 0]
+
+                    game = MatrixGame(10)
+                    self.can_continue, time = game.run()
+                    if self.can_continue:
+                        self.next_level = 2
+                        self.time_archive[0] = time
+                        print(time)
+
                 if self.info_button.event_mouse(event):
                     from src.ui.info_window import InfoWindow
                     theme_colors = {

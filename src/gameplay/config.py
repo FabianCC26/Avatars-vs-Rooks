@@ -1,4 +1,4 @@
-import pygame
+import pygame 
 import os
 
 # ----------------- RUTAS -----------------
@@ -39,15 +39,21 @@ SPAWN_INTERVAL = 3.0  # segundos entre spawns
 PROJECTILE_SPEED = 8
 
 # ----------------- ROOKS (torres) ----------------------
+# De la tabla:
+# Sand:   Attack 2, Cost 50,  Resistance 3
+# Rock:   Attack 4, Cost 100, Resistance 14
+# Fire:   Attack 8, Cost 150, Resistance 16
+# Water:  Attack 8, Cost 150, Resistance 16
+
 ROOK_IMAGE_SIZE = (60, 60)
 ROOK_STATS = {
     "arena": {
-        "vida": 3,
-        "daño": 2,
+        "vida": 3,                   # Resistance
+        "daño": 2,                   # Attack
         "rango": 200,
-        "velocidad_ataque": 4.0,
-        "image": load_img("images/rooks/arena.png",ROOK_IMAGE_SIZE),
-        "color": (199, 178, 117),     # Color del proyectil
+        "velocidad_ataque": 4.0,     # puedes ajustar luego si quieres otro ritmo
+        "image": load_img("images/rooks/arena.png", ROOK_IMAGE_SIZE),
+        "color": (199, 178, 117),    # Color del proyectil
         "cost": 50,
     },
     "roca": {
@@ -55,7 +61,7 @@ ROOK_STATS = {
         "daño": 4,
         "rango": 200,
         "velocidad_ataque": 4.0,
-        "image": load_img("images/rooks/roca.png",ROOK_IMAGE_SIZE),
+        "image": load_img("images/rooks/roca.png", ROOK_IMAGE_SIZE),
         "color": (120, 120, 120),
         "cost": 100,
     },
@@ -64,7 +70,7 @@ ROOK_STATS = {
         "daño": 8,
         "rango": 200,
         "velocidad_ataque": 4.0,
-        "image": load_img("images/rooks/fuego.png",ROOK_IMAGE_SIZE),
+        "image": load_img("images/rooks/fuego.png", ROOK_IMAGE_SIZE),
         "color": (255, 80, 20),
         "cost": 150,
     },
@@ -73,58 +79,68 @@ ROOK_STATS = {
         "daño": 8,
         "rango": 200,
         "velocidad_ataque": 4.0,
-        "image": load_img("images/rooks/agua.png",ROOK_IMAGE_SIZE),
+        "image": load_img("images/rooks/agua.png", ROOK_IMAGE_SIZE),
         "color": (80, 160, 255),
         "cost": 150,
     },
 }
 
-# AVATARS (Enemigos)
+# ----------------- AVATARS (Enemigos) -----------------
+# Tabla:
+# Archer     -> Power Attack 2,  Resistance 5,  Speed 12, DPS 10
+# Squire     -> Power Attack 3,  Resistance 10, Speed 10, DPS 15
+# Lummberjack-> Power Attack 9,  Resistance 20, Speed 13, DPS 5
+# Canibbal   -> Power Attack 12, Resistance 25, Speed 14, DPS 3
+#
+# Mapeo:
+#   vida   = Resistance
+#   daño   = Power Attack
+#   velocidad ~ 0.05 * Speed  (mantiene magnitud parecida a la que ya usabas)
+#   attack_interval = daño / DPS
+
 AVATAR_IMAGE_SIZE = (65, 65)
 AVATAR_STATS = {
-    "flechador": {
+    "flechador": {  # Archer
         "vida": 5,
-        "daño": 0.2,
-        "velocidad": 70 / (12*10),
-        "attack_interval": 10.0,
+        "daño": 2,
+        "velocidad": 0.05 * 12,     # Speed 12
+        "attack_interval": 2 / 10,  # DPS 10
         "color": (200, 220, 255),
-        "image": load_img("images/avatars/arquero.png",AVATAR_IMAGE_SIZE),
+        "image": load_img("images/avatars/arquero.png", AVATAR_IMAGE_SIZE),
         "rango": 200,
     },
-    "escudero": {
+    "escudero": {   # Squire
         "vida": 10,
-        "daño": 0.3,
-        "velocidad": 70 / (10*10),
-        "attack_interval": 15.0,
-        "image": load_img("images/avatars/escudero.png",AVATAR_IMAGE_SIZE),
+        "daño": 3,
+        "velocidad": 0.05 * 10,     # Speed 10
+        "attack_interval": 3 / 15,  # DPS 15
+        "image": load_img("images/avatars/escudero.png", AVATAR_IMAGE_SIZE),
         "color": (180, 200, 255),
         "rango": 200,
     },
-    "lenador": {
+    "lenador": {    # Lumberjack
         "vida": 20,
-        "daño": 0.9,
-        "velocidad": 70 / (13*10),
-        "attack_interval": 5.0,
-        "image": load_img("images/avatars/leñador.png",AVATAR_IMAGE_SIZE),
+        "daño": 9,
+        "velocidad": 0.05 * 13,     # Speed 13
+        "attack_interval": 9 / 5,   # DPS 5
+        "image": load_img("images/avatars/leñador.png", AVATAR_IMAGE_SIZE),
         "color": (150, 255, 150),
         "rango": 200,
     },
-    "canibal": {
+    "canibal": {    # Cannibal
         "vida": 25,
         "daño": 12,
-        "velocidad": 70 / (14*10),
-        "attack_interval": 3.0,
-        "image": load_img("images/avatars/canibal.png",AVATAR_IMAGE_SIZE),
+        "velocidad": 0.05 * 14,     # Speed 14
+        "attack_interval": 12 / 3,  # DPS 3
+        "image": load_img("images/avatars/canibal.png", AVATAR_IMAGE_SIZE),
         "color": (255, 150, 150),
         "rango": 200,
     },
 }
 
 # ----------------- PROBABILIDADES DE SPAWN -----------------
-# Puedes cambiar estos pesos si quieres hacer el juego más o menos difícil.
-# La suma no tiene que ser 1, random.choices normaliza internamente.
 AVATAR_SPAWN_WEIGHTS = {
-    "flechador": 0.35,
+    "flechador": 0.40,
     "escudero": 0.30,
     "lenador":  0.20,
     "canibal":  0.15,
